@@ -1,19 +1,27 @@
 export const STATES = [
-  'All States',
+   'All States',
+  'Ondo',
+  'Oyo',
   'Lagos',
+  'Ekiti',
+  'Osun',
+  'Ogun',
+  'ilorin',
+  'Kogi',
+  'Cross river',
   'Abuja FCT',
   'Rivers',
   'Kano',
-  'Ondo',
-  'Oyo',
   'Enugu',
   'Delta',
-  'Ogun',
   'Kaduna',
   'Anambra',
   'Edo',
   'Akwa Ibom',
   'Plateau',
+  'Benin',
+  'Porthacourt',
+  'Niger'
 ];
 
 // Edit your marketplace categories here later if you want to add/remove more.
@@ -26,9 +34,10 @@ export const CATEGORIES = [
   { name: 'Second-hand Phones', icon: '📱' },
   { name: 'Fashion & Clothing', icon: '👗' },
   { name: 'Photography & Video', icon: '📸' },
-  { name: 'Beauty & Wellness', icon: '💄' },
+  { name: 'Beauty & Bodycare', icon: '💄' },
   { name: 'Poultry Sales', icon: '🐔' },
   { name: 'Furniture & Home Furniture Sales', icon: '🛋️' },
+  { name: 'Gaming Console', icon:'🎮'}
 ];
 
 export const SAFETY_TEXT = 'Payments happen outside the platform (WhatsApp, bank transfer, OPay, PalmPay). PeezuHub does not hold funds — deal at your own risk and verify sellers.';

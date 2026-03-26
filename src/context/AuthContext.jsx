@@ -31,6 +31,7 @@ export function AuthProvider({ children }) {
         dispatch({ type: 'STOP_LOADING' });
         return;
       }
+
       try {
         const { data } = await client.get('/auth/me');
         dispatch({ type: 'SET_AUTH', payload: { user: data.user, token: state.token } });
@@ -40,28 +41,33 @@ export function AuthProvider({ children }) {
         dispatch({ type: 'LOGOUT' });
       }
     }
+
     loadUser();
   }, [state.token]);
+
+  const persistAuth = (data) => {
+    localStorage.setItem('peezuhub_token', data.token);
+    localStorage.setItem('peezuhub_user', JSON.stringify(data.user));
+    dispatch({ type: 'SET_AUTH', payload: data });
+  };
 
   const value = useMemo(() => ({
     ...state,
     async login(payload) {
       const { data } = await client.post('/auth/login', payload);
-      localStorage.setItem('peezuhub_token', data.token);
-      localStorage.setItem('peezuhub_user', JSON.stringify(data.user));
-      dispatch({ type: 'SET_AUTH', payload: data });
+      persistAuth(data);
     },
     async register(payload) {
       const { data } = await client.post('/auth/register', payload);
-      localStorage.setItem('peezuhub_token', data.token);
-      localStorage.setItem('peezuhub_user', JSON.stringify(data.user));
-      dispatch({ type: 'SET_AUTH', payload: data });
+      persistAuth(data);
+    },
+    async googleAuth(credential) {
+      const { data } = await client.post('/auth/google', { credential });
+      persistAuth(data);
     },
     async googleLogin(credential) {
       const { data } = await client.post('/auth/google', { credential });
-      localStorage.setItem('peezuhub_token', data.token);
-      localStorage.setItem('peezuhub_user', JSON.stringify(data.user));
-      dispatch({ type: 'SET_AUTH', payload: data });
+      persistAuth(data);
     },
     logout() {
       localStorage.removeItem('peezuhub_token');

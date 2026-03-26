@@ -1,6 +1,3 @@
-// FIX #1 – Improved error propagation for Google auth so the correct backend
-//           error message reaches the toast instead of the generic fallback.
-
 import { createContext, useContext, useEffect, useMemo, useReducer } from 'react';
 import client from '../api/client';
 
@@ -16,6 +13,8 @@ function reducer(state, action) {
   switch (action.type) {
     case 'SET_AUTH':
       return { ...state, user: action.payload.user, token: action.payload.token, loading: false };
+    case 'SET_USER':
+      return { ...state, user: action.payload, loading: false };
     case 'STOP_LOADING':
       return { ...state, loading: false };
     case 'LOGOUT':
@@ -28,6 +27,17 @@ function reducer(state, action) {
 export function AuthProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, initialState);
 
+  const persistUserOnly = (user) => {
+    localStorage.setItem('peezuhub_user', JSON.stringify(user));
+    dispatch({ type: 'SET_USER', payload: user });
+  };
+
+  const persistAuth = (data) => {
+    localStorage.setItem('peezuhub_token', data.token);
+    localStorage.setItem('peezuhub_user', JSON.stringify(data.user));
+    dispatch({ type: 'SET_AUTH', payload: data });
+  };
+
   useEffect(() => {
     async function loadUser() {
       if (!state.token) {
@@ -36,7 +46,7 @@ export function AuthProvider({ children }) {
       }
       try {
         const { data } = await client.get('/auth/me');
-        dispatch({ type: 'SET_AUTH', payload: { user: data.user, token: state.token } });
+        persistUserOnly(data.user);
       } catch {
         localStorage.removeItem('peezuhub_token');
         localStorage.removeItem('peezuhub_user');
@@ -45,12 +55,6 @@ export function AuthProvider({ children }) {
     }
     loadUser();
   }, [state.token]);
-
-  const persistAuth = (data) => {
-    localStorage.setItem('peezuhub_token', data.token);
-    localStorage.setItem('peezuhub_user', JSON.stringify(data.user));
-    dispatch({ type: 'SET_AUTH', payload: data });
-  };
 
   const value = useMemo(
     () => ({
@@ -66,7 +70,6 @@ export function AuthProvider({ children }) {
         persistAuth(data);
       },
 
-      // Used by RegisterPage
       async googleAuth(payload) {
         const requestBody =
           typeof payload === 'string'
@@ -76,7 +79,6 @@ export function AuthProvider({ children }) {
         persistAuth(data);
       },
 
-      // Used by LoginPage
       async googleLogin(payload) {
         const requestBody =
           typeof payload === 'string'
@@ -84,6 +86,13 @@ export function AuthProvider({ children }) {
             : { accessToken: payload?.accessToken, mode: payload?.mode || 'login' };
         const { data } = await client.post('/auth/google', requestBody);
         persistAuth(data);
+      },
+
+      async refreshUser() {
+        if (!state.token) return null;
+        const { data } = await client.get('/auth/me');
+        persistUserOnly(data.user);
+        return data.user;
       },
 
       logout() {

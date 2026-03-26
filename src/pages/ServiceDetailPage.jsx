@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -49,9 +49,12 @@ export default function ServiceDetailPage() {
   if (error) return <div className="card text-rose-600">{error}</div>;
   if (!listing) return null;
 
+  const currentUserId = user?._id || user?.id;
+  const ownerId = listing.user?._id || listing.user?.id;
+  const isOwner = Boolean(currentUserId && ownerId && currentUserId === ownerId);
   const isSold = listing.saleStatus === 'sold';
-  const isOwner = user && listing.user?._id === user._id;
   const disableBuyerActions = isSold && !isOwner;
+  const canContactSeller = !disableBuyerActions && !isOwner;
 
   async function submitReview(values) {
     try {
@@ -125,6 +128,11 @@ export default function ServiceDetailPage() {
               This listing has been marked as sold by the owner, so buyer contact actions are turned off.
             </div>
           )}
+          {isOwner && (
+            <div className="rounded-3xl border border-brand-100 bg-brand-50 p-4 text-sm text-brand-700">
+              This is your listing. Buyer actions, reviews and reporting are hidden for your own listing. You can manage it from your <Link to="/profile" className="font-semibold underline">profile dashboard</Link>.
+            </div>
+          )}
           <SafetyBanner compact />
         </div>
 
@@ -152,7 +160,11 @@ export default function ServiceDetailPage() {
             {!listing.reviews?.length && <p className="text-sm text-slate-500">No reviews yet.</p>}
           </div>
 
-          {user && (
+          {isOwner ? (
+            <div className="rounded-3xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-600">
+              Owners cannot review or rate their own listings.
+            </div>
+          ) : user ? (
             <form className="grid gap-3 rounded-3xl border border-slate-100 p-4" onSubmit={reviewForm.handleSubmit(submitReview)}>
               <h3 className="font-semibold">Leave a review</h3>
               <select className="input" {...reviewForm.register('rating')}>
@@ -161,6 +173,10 @@ export default function ServiceDetailPage() {
               <textarea className="input min-h-[120px]" placeholder="Share your buying experience" {...reviewForm.register('comment')} />
               <button className="btn-primary" type="submit">Submit review</button>
             </form>
+          ) : (
+            <div className="rounded-3xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-600">
+              <Link to="/login" className="font-semibold text-brand-700">Sign in</Link> to leave a review after you interact with the seller.
+            </div>
           )}
         </div>
       </div>
@@ -168,9 +184,9 @@ export default function ServiceDetailPage() {
       <div className="space-y-6">
         <div className="card sticky top-24 space-y-4">
           <h2 className="text-xl font-bold">Contact seller</h2>
-          {disableBuyerActions ? (
+          {!canContactSeller ? (
             <button className="btn-primary w-full opacity-70" type="button" disabled>
-              This listing is sold
+              {isOwner ? 'This is your listing' : 'This listing is sold'}
             </button>
           ) : (
             <a className="btn-primary w-full gap-2" href={whatsappLink(listing.contact?.whatsapp, `Hello, I found your listing "${listing.title}" on PeezuHub. Is it still available?`)} target="_blank" rel="noreferrer">
@@ -178,7 +194,7 @@ export default function ServiceDetailPage() {
             </a>
           )}
 
-          {!disableBuyerActions && (
+          {canContactSeller && (
             <form className="space-y-3" onSubmit={contactForm.handleSubmit(submitContact)}>
               <h3 className="font-semibold">In-app buyer message</h3>
               <input className="input" placeholder="Your name" {...contactForm.register('senderName')} />
@@ -189,13 +205,19 @@ export default function ServiceDetailPage() {
             </form>
           )}
 
-          <form className="space-y-3 rounded-3xl border border-rose-100 bg-rose-50 p-4" onSubmit={reportForm.handleSubmit(submitReport)}>
-            <div className="flex items-center gap-2 text-rose-700"><ShieldAlert size={18} /><h3 className="font-semibold">Report Listing</h3></div>
-            <input className="input" placeholder="Your name" {...reportForm.register('reporterName')} />
-            <input className="input" placeholder="Your email (optional)" {...reportForm.register('reporterEmail')} />
-            <textarea className="input min-h-[110px]" placeholder="Why are you reporting this listing?" {...reportForm.register('reason')} />
-            <button className="btn-secondary w-full border-rose-200 bg-white text-rose-700" type="submit"><MessageCircleWarning size={18} /> Report User/Listing</button>
-          </form>
+          {isOwner ? (
+            <div className="rounded-3xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-600">
+              Owners cannot report their own listings.
+            </div>
+          ) : (
+            <form className="space-y-3 rounded-3xl border border-rose-100 bg-rose-50 p-4" onSubmit={reportForm.handleSubmit(submitReport)}>
+              <div className="flex items-center gap-2 text-rose-700"><ShieldAlert size={18} /><h3 className="font-semibold">Report Listing</h3></div>
+              <input className="input" placeholder="Your name" {...reportForm.register('reporterName')} />
+              <input className="input" placeholder="Your email (optional)" {...reportForm.register('reporterEmail')} />
+              <textarea className="input min-h-[110px]" placeholder="Why are you reporting this listing?" {...reportForm.register('reason')} />
+              <button className="btn-secondary w-full border-rose-200 bg-white text-rose-700" type="submit"><MessageCircleWarning size={18} /> Report User/Listing</button>
+            </form>
+          )}
         </div>
       </div>
     </div>

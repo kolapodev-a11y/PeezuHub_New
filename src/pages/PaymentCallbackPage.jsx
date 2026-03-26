@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import client from '../api/client';
+import { useAuth } from '../context/AuthContext';
 
 export default function PaymentCallbackPage() {
   const [params] = useSearchParams();
+  const { refreshUser } = useAuth();
   const [status, setStatus] = useState('verifying');
   const [message, setMessage] = useState('Verifying your premium payment, please wait…');
 
@@ -19,8 +21,9 @@ export default function PaymentCallbackPage() {
       try {
         const { data } = await client.get(`/payments/paystack/verify/${reference}`);
         if (data.payment?.status === 'success') {
+          await refreshUser();
           setStatus('success');
-          setMessage('Payment verified successfully. Your listing now has premium visibility, and it will stay prioritised while the upgrade is active.');
+          setMessage('Payment verified successfully. Your seller premium is now active, and your current and future listings can receive premium visibility while the upgrade stays active.');
         } else {
           setStatus('error');
           setMessage(`Payment status: "${data.payment?.status || 'unknown'}". If you believe this is wrong, please contact support.`);
@@ -32,7 +35,7 @@ export default function PaymentCallbackPage() {
     }
 
     verify();
-  }, [params]);
+  }, [params, refreshUser]);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 py-16 text-center">

@@ -69,7 +69,7 @@ export default function HomePage() {
       <section className="space-y-4">
         <div>
           <h2 className="section-title">Featured & premium listings</h2>
-          <p className="mt-1 text-sm text-slate-500">Premium listings get top placement, stronger trust signals and better visibility on the homepage.</p>
+          <p className="mt-1 text-sm text-slate-500">Seller premium lifts eligible listings to the top of the homepage and keeps trust signals stronger while the account upgrade is active.</p>
         </div>
         {loading ? <Loader label="Loading featured listings..." /> : <FeaturedCarousel listings={filteredFeatured} />}
       </section>

@@ -4,14 +4,13 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Navbar() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
   const isAuthPage = ['/login', '/register'].includes(location.pathname);
-  const linkClass = ({ isActive }) =>
-    `text-sm font-medium ${isActive ? 'text-brand-700' : 'text-slate-600'}`;
+  const linkClass = ({ isActive }) => `text-sm font-medium ${isActive ? 'text-brand-700' : 'text-slate-600'}`;
 
   useEffect(() => {
     setOpen(false);
@@ -22,9 +21,7 @@ export default function Navbar() {
       <header className="sticky top-0 z-40 border-b border-white/60 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4">
           <Link to="/" className="flex items-center gap-2 text-brand-700">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-600 text-white shadow-soft">
-              P
-            </div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-600 text-white shadow-soft">P</div>
             <div>
               <p className="text-base font-bold">PeezuHub</p>
               <p className="text-xs text-slate-500">Trusted Nigerian listings</p>
@@ -44,9 +41,7 @@ export default function Navbar() {
     <header className="sticky top-0 z-40 border-b border-white/60 bg-white/90 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4">
         <Link to="/" className="flex items-center gap-2 text-brand-700">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-600 text-white shadow-soft">
-            P
-          </div>
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-600 text-white shadow-soft">P</div>
           <div>
             <p className="text-base font-bold">PeezuHub</p>
             <p className="text-xs text-slate-500">Trusted Nigerian listings</p>
@@ -85,7 +80,7 @@ export default function Navbar() {
 
         <button
           className="inline-flex rounded-2xl border border-slate-200 p-2 md:hidden"
-          onClick={() => setOpen((v) => !v)}
+          onClick={() => setOpen((value) => !value)}
           aria-label={open ? 'Close menu' : 'Open menu'}
         >
           {open ? <X size={20} /> : <Menu size={20} />}
@@ -110,9 +105,9 @@ export default function Navbar() {
                     Admin
                   </NavLink>
                 )}
-                <button className="btn-primary mt-4 w-full" onClick={logout}>
-                  Logout
-                </button>
+                <p className="mt-3 text-xs leading-5 text-slate-500">
+                  Open your profile to manage listings, view seller details and sign out securely.
+                </p>
               </div>
             )}
 

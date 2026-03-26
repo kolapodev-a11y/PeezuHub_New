@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Edit3, Eye, Star, Tag, Trash2 } from 'lucide-react';
+import { Edit3, Eye, ShieldCheck, Star, Tag, Trash2 } from 'lucide-react';
 import Badge from './Badge';
 import RatingStars from './RatingStars';
 import { formatDate, money, truncate } from '../utils/format';
@@ -11,10 +11,11 @@ export default function ManageListingCard({
   onDelete,
   onUpgrade,
   actionLoading,
+  accountPremiumActive,
+  accountPremiumPending,
 }) {
-  const hasActivePremium = listing.isFeatured && listing.featuredUntil && new Date(listing.featuredUntil) > new Date();
+  const premiumCoverageActive = listing.premiumPaymentStatus === 'paid' && listing.featuredUntil && new Date(listing.featuredUntil) > new Date();
   const isSold = listing.saleStatus === 'sold';
-  const isRejected = listing.status === 'rejected';
 
   return (
     <div className="card overflow-hidden p-0">
@@ -25,8 +26,9 @@ export default function ManageListingCard({
           {listing.status === 'approved' && <Badge color="green">Approved</Badge>}
           {listing.status === 'rejected' && <Badge color="red">Rejected</Badge>}
           {isSold && <Badge color="yellow">Sold</Badge>}
-          {hasActivePremium && <Badge color="yellow">Premium</Badge>}
+          {listing.isFeatured && <Badge color="yellow">Premium</Badge>}
           {listing.isVerified && !isSold && <Badge color="green">Verified</Badge>}
+          {premiumCoverageActive && !listing.isFeatured && <Badge color="blue">Premium Ready</Badge>}
         </div>
       </div>
 
@@ -45,7 +47,7 @@ export default function ManageListingCard({
           <p><strong>Status:</strong> {listing.status}</p>
           <p><strong>Sale status:</strong> {listing.saleStatus}</p>
           <p><strong>Location:</strong> {listing.city}, {listing.state}</p>
-          {hasActivePremium && <p><strong>Premium until:</strong> {formatDate(listing.featuredUntil)}</p>}
+          {premiumCoverageActive && <p><strong>Premium coverage until:</strong> {formatDate(listing.featuredUntil)}</p>}
           {listing.rejectionReason && <p className="text-rose-600"><strong>Reason:</strong> {listing.rejectionReason}</p>}
         </div>
 
@@ -56,6 +58,17 @@ export default function ManageListingCard({
           </div>
           <span>{listing.priceLabel}</span>
         </div>
+
+        {(accountPremiumActive || accountPremiumPending) && (
+          <div className="rounded-2xl border border-brand-100 bg-brand-50 px-3 py-2 text-xs text-brand-700">
+            <span className="inline-flex items-center gap-1 font-semibold">
+              <ShieldCheck size={14} />
+              {accountPremiumActive
+                ? 'Your seller premium covers this listing automatically.'
+                : 'Premium payment is pending verification for your account.'}
+            </span>
+          </div>
+        )}
 
         <div className="grid gap-2 sm:grid-cols-2">
           <Link to={`/listings/${listing._id}`} className="btn-secondary">
@@ -78,12 +91,11 @@ export default function ManageListingCard({
           <button
             className="btn-primary"
             type="button"
-            onClick={() => onUpgrade(listing)}
-            disabled={actionLoading || isSold || hasActivePremium || isRejected}
-            title={isRejected ? 'Edit and resubmit this listing before upgrading.' : ''}
+            onClick={onUpgrade}
+            disabled={actionLoading || accountPremiumActive || accountPremiumPending}
           >
             <Star size={16} />
-            {hasActivePremium ? 'Premium Active' : 'Upgrade'}
+            {accountPremiumActive ? 'Premium Active' : accountPremiumPending ? 'Upgrade Pending' : 'Upgrade Account'}
           </button>
           <button
             className="btn-secondary sm:col-span-2 border-rose-200 bg-white text-rose-700"

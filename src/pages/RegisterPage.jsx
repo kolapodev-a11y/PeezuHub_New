@@ -1,20 +1,19 @@
-// src/pages/RegisterPage.jsx
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { GoogleLogin } from '@react-oauth/google';   // ← ADD THIS
+import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../context/AuthContext';
 
 const schema = z.object({
-  name: z.string().min(2),
-  email: z.string().email(),
-  password: z.string().min(6),
+  name: z.string().min(2, 'Full name must be at least 2 characters'),
+  email: z.string().email('Enter a valid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
 export default function RegisterPage() {
-  const { register: signup, googleLogin } = useAuth();  // ← ADD googleLogin
+  const { register: signup, googleAuth } = useAuth();
   const navigate = useNavigate();
   const form = useForm({
     resolver: zodResolver(schema),
@@ -31,6 +30,20 @@ export default function RegisterPage() {
     }
   }
 
+  async function handleGoogleSuccess(response) {
+    try {
+      if (!response?.credential) {
+        toast.error('Google credential missing');
+        return;
+      }
+      await googleAuth(response.credential);
+      toast.success('Signed up with Google!');
+      navigate('/');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Google sign-up failed');
+    }
+  }
+
   return (
     <div className="mx-auto max-w-lg card space-y-6">
       <div>
@@ -42,32 +55,44 @@ export default function RegisterPage() {
 
       <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
         <input className="input" placeholder="Full name" {...form.register('name')} />
+        {form.formState.errors.name && (
+          <p className="text-sm text-red-600">{form.formState.errors.name.message}</p>
+        )}
+
         <input className="input" placeholder="Email" {...form.register('email')} />
+        {form.formState.errors.email && (
+          <p className="text-sm text-red-600">{form.formState.errors.email.message}</p>
+        )}
+
         <input type="password" className="input" placeholder="Password" {...form.register('password')} />
+        {form.formState.errors.password && (
+          <p className="text-sm text-red-600">{form.formState.errors.password.message}</p>
+        )}
+
         <button className="btn-primary w-full" type="submit">Register</button>
       </form>
 
-      {/* ── Google Sign-Up Button ── */}
+      <div className="flex items-center gap-3">
+        <div className="h-px flex-1 bg-slate-200" />
+        <span className="text-xs uppercase tracking-wide text-slate-400">or</span>
+        <div className="h-px flex-1 bg-slate-200" />
+      </div>
+
       <div className="flex justify-center">
         <GoogleLogin
-          onSuccess={async ({ credential }) => {
-            try {
-              await googleLogin(credential);
-              toast.success('Signed up with Google!');
-              navigate('/');
-            } catch (err) {
-              toast.error(err.response?.data?.message || 'Google sign-up failed');
-            }
-          }}
+          onSuccess={handleGoogleSuccess}
           onError={() => toast.error('Google sign-up failed')}
-          text="signup_with"        // shows "Sign up with Google"
+          text="signup_with"
           shape="rectangular"
+          width="300"
         />
       </div>
 
       <p className="text-sm text-slate-500">
         Already registered?{' '}
-        <Link className="font-semibold text-brand-700" to="/login">Login</Link>
+        <Link className="font-semibold text-brand-700" to="/login">
+          Login
+        </Link>
       </p>
     </div>
   );

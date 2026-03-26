@@ -37,15 +37,15 @@ export default function HomePage() {
       <section className="grid gap-6 lg:grid-cols-[1.3fr,0.7fr]">
         <div className="rounded-[2rem] bg-gradient-to-br from-brand-700 via-brand-600 to-sky-500 p-6 text-white shadow-soft md:p-10">
           <p className="mb-4 inline-flex rounded-full bg-white/15 px-4 py-2 text-xs font-semibold uppercase tracking-wide">Nigeria's safe, moderated marketplace</p>
-          <h1 className="max-w-2xl text-3xl font-black leading-tight md:text-5xl">Discover trusted Nigerian businesses & freelancers</h1>
-          <p className="mt-4 max-w-2xl text-sm leading-7 text-blue-50 md:text-base">Find reliable local service providers, post your own offer, and connect through WhatsApp or email with strong moderation, scam checks, and Nigerian state-based discovery.</p>
+          <h1 className="max-w-2xl text-3xl font-black leading-tight md:text-5xl">Buy, sell and discover trusted Nigerian listings</h1>
+          <p className="mt-4 max-w-2xl text-sm leading-7 text-blue-50 md:text-base">Explore local listings, post what you want to sell, and connect through WhatsApp or email with stronger moderation, scam checks, and state-based discovery.</p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <Link to="/explore" className="btn-primary bg-white text-brand-700 hover:bg-blue-50">Explore listings</Link>
-            <Link to="/post-service" className="btn-secondary border-white/30 bg-white/10 text-white hover:bg-white/20">Post a service</Link>
+            <Link to="/post-service" className="btn-secondary border-white/30 bg-white/10 text-white hover:bg-white/20">Post a listing</Link>
           </div>
           <div className="mt-6 flex items-center gap-3 rounded-3xl bg-white/10 p-3 backdrop-blur">
             <Search size={18} />
-            <p className="text-sm">Fast filters for Lagos, Abuja FCT, Rivers, Kano, Ondo, Oyo and more.</p>
+            <p className="text-sm">Quick discovery for cars, houses, land, phones, poultry, furniture and more.</p>
           </div>
         </div>
 
@@ -69,7 +69,7 @@ export default function HomePage() {
       <section className="space-y-4">
         <div>
           <h2 className="section-title">Featured & premium listings</h2>
-          <p className="mt-1 text-sm text-slate-500">Top placement for premium businesses with PRO and VERIFIED visibility badges.</p>
+          <p className="mt-1 text-sm text-slate-500">Premium listings get top placement, stronger trust signals and better visibility on the homepage.</p>
         </div>
         {loading ? <Loader label="Loading featured listings..." /> : <FeaturedCarousel listings={filteredFeatured} />}
       </section>
@@ -77,7 +77,7 @@ export default function HomePage() {
       <section className="space-y-4">
         <div>
           <h2 className="section-title">Popular categories</h2>
-          <p className="mt-1 text-sm text-slate-500">Expand anytime as PeezuHub grows across Nigerian states and cities.</p>
+          <p className="mt-1 text-sm text-slate-500">You can edit these categories anytime later from the shared constants file.</p>
         </div>
         {loading ? <Loader label="Loading categories..." /> : <CategoryGrid categories={categories} />}
       </section>

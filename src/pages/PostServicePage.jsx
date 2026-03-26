@@ -19,7 +19,6 @@ const schema = z.object({
   whatsapp: z.string().min(7),
   email: z.string().email().optional().or(z.literal('')),
   phone: z.string().optional(),
-  premiumRequested: z.boolean().default(false),
   safetyAccepted: z.literal(true),
 });
 
@@ -28,6 +27,7 @@ export default function PostServicePage() {
   const [files, setFiles] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [createdListing, setCreatedListing] = useState(null);
+
   const form = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -38,11 +38,10 @@ export default function PostServicePage() {
       city: '',
       locationLabel: '',
       startingPrice: 0,
-      priceLabel: 'Starting from',
+      priceLabel: 'Asking price',
       whatsapp: '',
       email: '',
       phone: '',
-      premiumRequested: false,
       safetyAccepted: false,
     },
   });
@@ -59,22 +58,19 @@ export default function PostServicePage() {
       toast.error('At least one photo is required');
       return;
     }
+
     try {
       setSubmitting(true);
       const payload = new FormData();
       Object.entries(values).forEach(([key, value]) => payload.append(key, value));
       files.forEach((file) => payload.append('photos', file));
+
       const { data } = await client.post('/listings', payload, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
+
       setCreatedListing(data.listing);
       toast.success(data.listing.status === 'rejected' ? 'Listing auto-rejected by safety filter' : 'Listing submitted for moderation');
-
-      if (data.paymentNeeded) {
-        const paymentRes = await client.post('/payments/paystack/initialize', { listingId: data.listing._id });
-        window.location.href = paymentRes.data.authorizationUrl;
-        return;
-      }
       form.reset();
       setFiles([]);
       setStep(1);
@@ -89,8 +85,8 @@ export default function PostServicePage() {
     <div className="grid gap-6 lg:grid-cols-[1fr,0.36fr]">
       <div className="card space-y-6">
         <div>
-          <h1 className="section-title">Post New Service</h1>
-          <p className="mt-1 text-sm text-slate-500">Submit your business or freelance service in three quick steps. All listings are moderated before going live.</p>
+          <h1 className="section-title">Post New Listing</h1>
+          <p className="mt-1 text-sm text-slate-500">List what you want to sell in three quick steps. Premium upgrade is optional later from your profile, not during posting.</p>
         </div>
 
         <div className="grid grid-cols-3 gap-3">
@@ -106,7 +102,7 @@ export default function PostServicePage() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="md:col-span-2">
                 <label className="mb-2 block text-sm font-medium">Title</label>
-                <input className="input" placeholder="Professional website design for SMEs" {...form.register('title')} />
+                <input className="input" placeholder="Clean Toyota Corolla for sale" {...form.register('title')} />
               </div>
               <div>
                 <label className="mb-2 block text-sm font-medium">Category</label>
@@ -122,28 +118,28 @@ export default function PostServicePage() {
               </div>
               <div>
                 <label className="mb-2 block text-sm font-medium">City</label>
-                <input className="input" placeholder="Ikeja" {...form.register('city')} />
+                <input className="input" placeholder="Akure" {...form.register('city')} />
               </div>
               <div>
                 <label className="mb-2 block text-sm font-medium">Location label</label>
-                <input className="input" placeholder="Allen Avenue, Ikeja" {...form.register('locationLabel')} />
+                <input className="input" placeholder="Main town, Akure" {...form.register('locationLabel')} />
               </div>
               <div>
-                <label className="mb-2 block text-sm font-medium">Starting price</label>
+                <label className="mb-2 block text-sm font-medium">Price</label>
                 <input type="number" className="input" {...form.register('startingPrice')} />
               </div>
               <div>
                 <label className="mb-2 block text-sm font-medium">Price label</label>
-                <input className="input" placeholder="Starting from" {...form.register('priceLabel')} />
+                <input className="input" placeholder="Asking price" {...form.register('priceLabel')} />
               </div>
               <div className="md:col-span-2">
                 <label className="mb-2 block text-sm font-medium">Description</label>
-                <textarea className="input min-h-[140px]" placeholder="Describe your service, turnaround time, target clients and what makes you trustworthy." {...form.register('description')} />
+                <textarea className="input min-h-[140px]" placeholder="Describe what you are selling, the condition, delivery options, and what a buyer should know before paying." {...form.register('description')} />
               </div>
               <div className="md:col-span-2">
                 <label className="mb-2 block text-sm font-medium">Required photo upload</label>
                 <input type="file" accept="image/*" multiple className="input" onChange={(e) => setFiles(Array.from(e.target.files).slice(0, 4))} />
-                <p className="mt-2 text-xs text-slate-500">Upload 1 to 4 photos. Images are stored directly for easy MVP deployment.</p>
+                <p className="mt-2 text-xs text-slate-500">Upload 1 to 4 photos. Clear images help buyers trust your listing faster.</p>
               </div>
             </div>
           )}
@@ -167,16 +163,12 @@ export default function PostServicePage() {
 
           {step === 3 && (
             <div className="space-y-4">
-              <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <input type="checkbox" className="mt-1" {...form.register('premiumRequested')} />
-                <span>
-                  <span className="block font-semibold">Feature my listing for ₦5,000/month</span>
-                  <span className="mt-1 block text-sm text-slate-500">Top carousel placement + VERIFIED badge after successful Paystack payment.</span>
-                </span>
-              </label>
+              <div className="rounded-3xl border border-brand-100 bg-brand-50 p-4 text-sm text-brand-700">
+                Premium is no longer forced during posting. You can upgrade any listing later from your profile whenever you're ready.
+              </div>
               <label className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
                 <input type="checkbox" className="mt-1" {...form.register('safetyAccepted')} />
-                <span className="text-sm font-medium leading-6">I confirm I will not request advance payments outside trusted methods and accept full responsibility.</span>
+                <span className="text-sm font-medium leading-6">I confirm this listing is genuine, I will not demand unsafe advance payments, and I accept responsibility for the information posted.</span>
               </label>
               <SafetyBanner compact />
             </div>
@@ -187,7 +179,7 @@ export default function PostServicePage() {
             {step < 3 ? (
               <button type="button" className="btn-primary" disabled={!stepReady[step]} onClick={() => setStep((current) => current + 1)}>Continue</button>
             ) : (
-              <button type="submit" className="btn-primary" disabled={submitting}>{submitting ? 'Submitting...' : 'Submit listing'}</button>
+              <button type="submit" className="btn-primary" disabled={submitting}>{submitting ? 'Submitting...' : 'Submit Listing'}</button>
             )}
           </div>
         </form>
@@ -197,7 +189,7 @@ export default function PostServicePage() {
         <SafetyBanner />
         <div className="card space-y-3">
           <h3 className="text-lg font-bold">Moderation flow</h3>
-          <p className="text-sm text-slate-600">All new listings start as <strong>Pending</strong>. PeezuTech reviews submissions, rejects scammy content, and can send a reason for rejected entries.</p>
+          <p className="text-sm text-slate-600">All new listings start as <strong>Pending</strong>. PeezuTech reviews submissions, rejects scammy content, and can share a reason for rejected entries.</p>
           {createdListing && (
             <div className="rounded-2xl bg-brand-50 p-4 text-sm text-brand-700">
               Last submission: <strong>{createdListing.title}</strong><br />Status: {createdListing.status}

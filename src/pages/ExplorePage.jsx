@@ -42,13 +42,13 @@ export default function ExplorePage() {
       <div className="card space-y-4">
         <div>
           <h1 className="section-title">Search & Explore</h1>
-          <p className="mt-1 text-sm text-slate-500">Use Nigerian state filters, category chips, and sorting to find the best fit quickly.</p>
+          <p className="mt-1 text-sm text-slate-500">Use Nigerian state filters, category chips, and sorting to find the right listing quickly.</p>
         </div>
         <input
           className="input"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search for web designers, food vendors, tutors, repairs..."
+          placeholder="Search for cars, furniture, houses, land, phones, poultry..."
         />
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">States</p>

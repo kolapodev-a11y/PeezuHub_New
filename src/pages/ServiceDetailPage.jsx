@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
 import { useParams } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import toast from 'react-hot-toast';
@@ -45,9 +45,13 @@ export default function ServiceDetailPage() {
   const reportForm = useForm({ resolver: zodResolver(reportSchema), defaultValues: { reporterName: user?.name || '', reporterEmail: user?.email || '', reason: '' } });
   const contactForm = useForm({ resolver: zodResolver(contactSchema), defaultValues: { senderName: user?.name || '', senderEmail: user?.email || '', senderPhone: '', message: '' } });
 
-  if (loading) return <Loader label="Loading service details..." />;
+  if (loading) return <Loader label="Loading listing details..." />;
   if (error) return <div className="card text-rose-600">{error}</div>;
   if (!listing) return null;
+
+  const isSold = listing.saleStatus === 'sold';
+  const isOwner = user && listing.user?._id === user._id;
+  const disableBuyerActions = isSold && !isOwner;
 
   async function submitReview(values) {
     try {
@@ -73,17 +77,17 @@ export default function ServiceDetailPage() {
   async function submitContact(values) {
     try {
       await client.post(`/messages/contact/${id}`, values);
-      toast.success('Enquiry sent');
+      toast.success('Message sent');
       contactForm.reset({ senderName: user?.name || '', senderEmail: user?.email || '', senderPhone: '', message: '' });
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Unable to send enquiry');
+      toast.error(err.response?.data?.message || 'Unable to send message');
     }
   }
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1.25fr,0.75fr]">
       <div className="space-y-6">
-        <div className="card space-y-4 p-0 overflow-hidden">
+        <div className="card space-y-4 overflow-hidden p-0">
           <img src={listing.photos?.[activePhoto]} alt={listing.title} className="h-[320px] w-full object-cover md:h-[420px]" />
           <div className="grid grid-cols-4 gap-3 p-4">
             {listing.photos?.map((photo, index) => (
@@ -96,8 +100,9 @@ export default function ServiceDetailPage() {
 
         <div className="card space-y-4">
           <div className="flex flex-wrap gap-2">
-            {listing.isFeatured && <Badge color="yellow">PRO</Badge>}
-            {listing.isVerified && <Badge color="green">VERIFIED</Badge>}
+            {listing.isFeatured && <Badge color="yellow">Premium</Badge>}
+            {listing.isVerified && <Badge color="green">Verified</Badge>}
+            {isSold && <Badge color="yellow">Sold</Badge>}
             <Badge color="blue">{listing.category}</Badge>
           </div>
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -109,12 +114,17 @@ export default function ServiceDetailPage() {
               </div>
             </div>
             <div className="rounded-3xl bg-brand-50 px-5 py-4 text-right text-brand-700">
-              <p className="text-xs uppercase tracking-wide">Starting price</p>
+              <p className="text-xs uppercase tracking-wide">Price</p>
               <p className="text-2xl font-bold">{money(listing.startingPrice)}</p>
               <p className="text-xs text-slate-500">{listing.priceLabel}</p>
             </div>
           </div>
           <p className="leading-8 text-slate-700">{listing.description}</p>
+          {disableBuyerActions && (
+            <div className="rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+              This listing has been marked as sold by the owner, so buyer contact actions are turned off.
+            </div>
+          )}
           <SafetyBanner compact />
         </div>
 
@@ -148,7 +158,7 @@ export default function ServiceDetailPage() {
               <select className="input" {...reviewForm.register('rating')}>
                 {[5, 4, 3, 2, 1].map((value) => <option key={value} value={value}>{value} Star</option>)}
               </select>
-              <textarea className="input min-h-[120px]" placeholder="Share your experience" {...reviewForm.register('comment')} />
+              <textarea className="input min-h-[120px]" placeholder="Share your buying experience" {...reviewForm.register('comment')} />
               <button className="btn-primary" type="submit">Submit review</button>
             </form>
           )}
@@ -156,19 +166,28 @@ export default function ServiceDetailPage() {
       </div>
 
       <div className="space-y-6">
-        <div className="card space-y-4 sticky top-24">
-          <h2 className="text-xl font-bold">Connect externally</h2>
-          <a className="btn-primary w-full gap-2" href={whatsappLink(listing.contact?.whatsapp, `Hello ${listing.title}, I found you on PeezuHub.`)} target="_blank" rel="noreferrer">
-            <Send size={18} /> WhatsApp Direct Link
-          </a>
-          <form className="space-y-3" onSubmit={contactForm.handleSubmit(submitContact)}>
-            <h3 className="font-semibold">In-app contact form</h3>
-            <input className="input" placeholder="Your name" {...contactForm.register('senderName')} />
-            <input className="input" placeholder="Your email (optional)" {...contactForm.register('senderEmail')} />
-            <input className="input" placeholder="Phone (optional)" {...contactForm.register('senderPhone')} />
-            <textarea className="input min-h-[120px]" placeholder="I need your service in..." {...contactForm.register('message')} />
-            <button className="btn-secondary w-full" type="submit">Send enquiry</button>
-          </form>
+        <div className="card sticky top-24 space-y-4">
+          <h2 className="text-xl font-bold">Contact seller</h2>
+          {disableBuyerActions ? (
+            <button className="btn-primary w-full opacity-70" type="button" disabled>
+              This listing is sold
+            </button>
+          ) : (
+            <a className="btn-primary w-full gap-2" href={whatsappLink(listing.contact?.whatsapp, `Hello, I found your listing "${listing.title}" on PeezuHub. Is it still available?`)} target="_blank" rel="noreferrer">
+              <Send size={18} /> WhatsApp Direct Link
+            </a>
+          )}
+
+          {!disableBuyerActions && (
+            <form className="space-y-3" onSubmit={contactForm.handleSubmit(submitContact)}>
+              <h3 className="font-semibold">In-app buyer message</h3>
+              <input className="input" placeholder="Your name" {...contactForm.register('senderName')} />
+              <input className="input" placeholder="Your email (optional)" {...contactForm.register('senderEmail')} />
+              <input className="input" placeholder="Phone (optional)" {...contactForm.register('senderPhone')} />
+              <textarea className="input min-h-[120px]" placeholder="Hi, I'm interested in buying this. Is it still available?" {...contactForm.register('message')} />
+              <button className="btn-secondary w-full" type="submit">Send message</button>
+            </form>
+          )}
 
           <form className="space-y-3 rounded-3xl border border-rose-100 bg-rose-50 p-4" onSubmit={reportForm.handleSubmit(submitReport)}>
             <div className="flex items-center gap-2 text-rose-700"><ShieldAlert size={18} /><h3 className="font-semibold">Report Listing</h3></div>

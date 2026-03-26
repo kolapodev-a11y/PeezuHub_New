@@ -1,5 +1,5 @@
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, ShieldCheck, X, Home } from 'lucide-react';
+import { Menu, ShieldCheck, X, Home, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
@@ -17,7 +17,6 @@ export default function Navbar() {
     setOpen(false);
   }, [location.pathname]);
 
-  // ── Auth pages: simplified header with "Back to Home" ──────────────────────
   if (isAuthPage) {
     return (
       <header className="sticky top-0 z-40 border-b border-white/60 bg-white/90 backdrop-blur">
@@ -32,11 +31,7 @@ export default function Navbar() {
             </div>
           </Link>
 
-          {/* FIX #2 – replaced "Create account" / "Back to login" with "Back to Home" */}
-          <Link
-            className="btn-secondary inline-flex items-center gap-2"
-            to="/"
-          >
+          <Link className="btn-secondary inline-flex items-center gap-2" to="/">
             <Home size={16} />
             Back to Home
           </Link>
@@ -45,7 +40,6 @@ export default function Navbar() {
     );
   }
 
-  // ── Main navigation ────────────────────────────────────────────────────────
   return (
     <header className="sticky top-0 z-40 border-b border-white/60 bg-white/90 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4">
@@ -62,11 +56,9 @@ export default function Navbar() {
         <nav className="hidden items-center gap-5 md:flex">
           <NavLink to="/" className={linkClass}>Home</NavLink>
           <NavLink to="/explore" className={linkClass}>Explore</NavLink>
-          <NavLink to="/post-service" className={linkClass}>Post Service</NavLink>
+          <NavLink to="/post-service" className={linkClass}>Post Listing</NavLink>
           {user && <NavLink to="/profile" className={linkClass}>Profile</NavLink>}
-          {user?.role === 'admin' && (
-            <NavLink to="/admin" className={linkClass}>Admin</NavLink>
-          )}
+          {user?.role === 'admin' && <NavLink to="/admin" className={linkClass}>Admin</NavLink>}
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
@@ -78,11 +70,9 @@ export default function Navbar() {
                   Admin
                 </span>
               )}
-              <button className="btn-secondary" onClick={() => navigate('/profile')}>
+              <button className="btn-secondary inline-flex items-center gap-2" onClick={() => navigate('/profile')}>
+                <User size={16} />
                 {user.name}
-              </button>
-              <button className="btn-primary" onClick={logout}>
-                Logout
               </button>
             </>
           ) : (
@@ -107,16 +97,26 @@ export default function Navbar() {
           <div className="flex flex-col gap-3">
             <NavLink to="/" className={linkClass}>Home</NavLink>
             <NavLink to="/explore" className={linkClass}>Explore</NavLink>
-            <NavLink to="/post-service" className={linkClass}>Post Service</NavLink>
-            {user && <NavLink to="/profile" className={linkClass}>Profile</NavLink>}
-            {user?.role === 'admin' && (
-              <NavLink to="/admin" className={linkClass}>Admin</NavLink>
+            <NavLink to="/post-service" className={linkClass}>Post Listing</NavLink>
+
+            {user && (
+              <div className="rounded-3xl border border-slate-100 bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Account</p>
+                <NavLink to="/profile" className={({ isActive }) => `mt-3 block text-sm font-medium ${isActive ? 'text-brand-700' : 'text-slate-700'}`}>
+                  Profile
+                </NavLink>
+                {user?.role === 'admin' && (
+                  <NavLink to="/admin" className={({ isActive }) => `mt-3 block text-sm font-medium ${isActive ? 'text-brand-700' : 'text-slate-700'}`}>
+                    Admin
+                  </NavLink>
+                )}
+                <button className="btn-primary mt-4 w-full" onClick={logout}>
+                  Logout
+                </button>
+              </div>
             )}
-            {user ? (
-              <button className="btn-primary" onClick={logout}>
-                Logout
-              </button>
-            ) : (
+
+            {!user && (
               <div className="grid grid-cols-2 gap-3 pt-2">
                 <Link className="btn-secondary w-full" to="/login">Login</Link>
                 <Link className="btn-primary w-full" to="/register">Register</Link>

@@ -5,13 +5,16 @@ import RatingStars from './RatingStars';
 import { money, truncate } from '../utils/format';
 
 export default function ListingCard({ listing }) {
+  const isSold = listing.saleStatus === 'sold';
+
   return (
-    <Link to={`/services/${listing._id}`} className="card block p-0 overflow-hidden transition hover:-translate-y-1">
+    <Link to={`/listings/${listing._id}`} className="card block overflow-hidden p-0 transition hover:-translate-y-1">
       <div className="relative h-44 bg-slate-100">
-        <img src={listing.photos?.[0]} alt={listing.title} className="h-full w-full object-cover" />
-        <div className="absolute left-3 top-3 flex gap-2">
-          {listing.isFeatured && <Badge color="yellow">PRO</Badge>}
-          {listing.isVerified && <Badge color="green">VERIFIED</Badge>}
+        <img src={listing.photos?.[0]} alt={listing.title} className={`h-full w-full object-cover ${isSold ? 'opacity-80' : ''}`} />
+        <div className="absolute left-3 top-3 flex flex-wrap gap-2">
+          {listing.isFeatured && <Badge color="yellow">Premium</Badge>}
+          {listing.isVerified && <Badge color="green">Verified</Badge>}
+          {isSold && <Badge color="yellow">Sold</Badge>}
           {listing.status === 'pending' && <Badge color="slate">Pending</Badge>}
           {listing.status === 'rejected' && <Badge color="red">Rejected</Badge>}
         </div>

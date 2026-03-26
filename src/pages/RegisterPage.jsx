@@ -3,8 +3,9 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../context/AuthContext';
+import AuthShell from '../components/AuthShell';
+import GoogleAuthButton from '../components/GoogleAuthButton';
 
 const schema = z.object({
   name: z.string().min(2, 'Full name must be at least 2 characters'),
@@ -24,50 +25,57 @@ export default function RegisterPage() {
     try {
       await signup(values);
       toast.success('Account created');
-      navigate('/');
+      navigate('/', { replace: true });
     } catch (err) {
       toast.error(err.response?.data?.message || 'Registration failed');
     }
   }
 
-  async function handleGoogleSuccess(response) {
+  async function handleGoogleSuccess({ accessToken }) {
     try {
-      if (!response?.credential) {
-        toast.error('Google credential missing');
-        return;
-      }
-      await googleAuth(response.credential);
-      toast.success('Signed up with Google!');
-      navigate('/');
+      await googleAuth({ accessToken, mode: 'register' });
+      toast.success('Signed up with Google');
+      navigate('/', { replace: true });
     } catch (err) {
       toast.error(err.response?.data?.message || 'Google sign-up failed');
     }
   }
 
   return (
-    <div className="mx-auto max-w-lg card space-y-6">
-      <div>
-        <h1 className="section-title">Create your account</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Start posting trusted Nigerian services and managing your profile.
+    <AuthShell
+      mode="register"
+      title="Create your account"
+      subtitle="Start posting trusted Nigerian services and managing your profile without confusing mixed login/register states."
+      footer={
+        <p className="text-sm text-slate-500">
+          Already registered?{' '}
+          <Link className="font-semibold text-brand-700" to="/login">
+            Login
+          </Link>
         </p>
-      </div>
-
+      }
+    >
       <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
-        <input className="input" placeholder="Full name" {...form.register('name')} />
-        {form.formState.errors.name && (
-          <p className="text-sm text-red-600">{form.formState.errors.name.message}</p>
-        )}
+        <div>
+          <input className="input" placeholder="Full name" {...form.register('name')} />
+          {form.formState.errors.name && (
+            <p className="mt-2 text-sm text-red-600">{form.formState.errors.name.message}</p>
+          )}
+        </div>
 
-        <input className="input" placeholder="Email" {...form.register('email')} />
-        {form.formState.errors.email && (
-          <p className="text-sm text-red-600">{form.formState.errors.email.message}</p>
-        )}
+        <div>
+          <input className="input" placeholder="Email" {...form.register('email')} />
+          {form.formState.errors.email && (
+            <p className="mt-2 text-sm text-red-600">{form.formState.errors.email.message}</p>
+          )}
+        </div>
 
-        <input type="password" className="input" placeholder="Password" {...form.register('password')} />
-        {form.formState.errors.password && (
-          <p className="text-sm text-red-600">{form.formState.errors.password.message}</p>
-        )}
+        <div>
+          <input type="password" className="input" placeholder="Password" {...form.register('password')} />
+          {form.formState.errors.password && (
+            <p className="mt-2 text-sm text-red-600">{form.formState.errors.password.message}</p>
+          )}
+        </div>
 
         <button className="btn-primary w-full" type="submit">Register</button>
       </form>
@@ -78,22 +86,11 @@ export default function RegisterPage() {
         <div className="h-px flex-1 bg-slate-200" />
       </div>
 
-      <div className="flex justify-center">
-        <GoogleLogin
-          onSuccess={handleGoogleSuccess}
-          onError={() => toast.error('Google sign-up failed')}
-          text="signup_with"
-          shape="rectangular"
-          width="300"
-        />
-      </div>
-
-      <p className="text-sm text-slate-500">
-        Already registered?{' '}
-        <Link className="font-semibold text-brand-700" to="/login">
-          Login
-        </Link>
-      </p>
-    </div>
+      <GoogleAuthButton
+        mode="register"
+        onAuthenticated={handleGoogleSuccess}
+        onError={(error) => toast.error(error?.response?.data?.message || error?.message || 'Google sign-up failed')}
+      />
+    </AuthShell>
   );
 }

@@ -61,12 +61,18 @@ export function AuthProvider({ children }) {
       const { data } = await client.post('/auth/register', payload);
       persistAuth(data);
     },
-    async googleAuth(credential) {
-      const { data } = await client.post('/auth/google', { credential });
+    async googleAuth(payload) {
+      const requestBody = typeof payload === 'string'
+        ? { credential: payload, mode: 'register' }
+        : { ...payload, mode: payload?.mode || 'register' };
+      const { data } = await client.post('/auth/google', requestBody);
       persistAuth(data);
     },
-    async googleLogin(credential) {
-      const { data } = await client.post('/auth/google', { credential });
+    async googleLogin(payload) {
+      const requestBody = typeof payload === 'string'
+        ? { credential: payload, mode: 'login' }
+        : { ...payload, mode: payload?.mode || 'login' };
+      const { data } = await client.post('/auth/google', requestBody);
       persistAuth(data);
     },
     logout() {

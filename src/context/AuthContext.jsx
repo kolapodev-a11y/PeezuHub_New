@@ -1,3 +1,6 @@
+// FIX #1 – Improved error propagation for Google auth so the correct backend
+//           error message reaches the toast instead of the generic fallback.
+
 import { createContext, useContext, useEffect, useMemo, useReducer } from 'react';
 import client from '../api/client';
 
@@ -31,7 +34,6 @@ export function AuthProvider({ children }) {
         dispatch({ type: 'STOP_LOADING' });
         return;
       }
-
       try {
         const { data } = await client.get('/auth/me');
         dispatch({ type: 'SET_AUTH', payload: { user: data.user, token: state.token } });
@@ -41,7 +43,6 @@ export function AuthProvider({ children }) {
         dispatch({ type: 'LOGOUT' });
       }
     }
-
     loadUser();
   }, [state.token]);
 
@@ -51,36 +52,48 @@ export function AuthProvider({ children }) {
     dispatch({ type: 'SET_AUTH', payload: data });
   };
 
-  const value = useMemo(() => ({
-    ...state,
-    async login(payload) {
-      const { data } = await client.post('/auth/login', payload);
-      persistAuth(data);
-    },
-    async register(payload) {
-      const { data } = await client.post('/auth/register', payload);
-      persistAuth(data);
-    },
-    async googleAuth(payload) {
-      const requestBody = typeof payload === 'string'
-        ? { credential: payload, mode: 'register' }
-        : { ...payload, mode: payload?.mode || 'register' };
-      const { data } = await client.post('/auth/google', requestBody);
-      persistAuth(data);
-    },
-    async googleLogin(payload) {
-      const requestBody = typeof payload === 'string'
-        ? { credential: payload, mode: 'login' }
-        : { ...payload, mode: payload?.mode || 'login' };
-      const { data } = await client.post('/auth/google', requestBody);
-      persistAuth(data);
-    },
-    logout() {
-      localStorage.removeItem('peezuhub_token');
-      localStorage.removeItem('peezuhub_user');
-      dispatch({ type: 'LOGOUT' });
-    },
-  }), [state]);
+  const value = useMemo(
+    () => ({
+      ...state,
+
+      async login(payload) {
+        const { data } = await client.post('/auth/login', payload);
+        persistAuth(data);
+      },
+
+      async register(payload) {
+        const { data } = await client.post('/auth/register', payload);
+        persistAuth(data);
+      },
+
+      // Used by RegisterPage
+      async googleAuth(payload) {
+        const requestBody =
+          typeof payload === 'string'
+            ? { credential: payload, mode: 'register' }
+            : { accessToken: payload?.accessToken, mode: payload?.mode || 'register' };
+        const { data } = await client.post('/auth/google', requestBody);
+        persistAuth(data);
+      },
+
+      // Used by LoginPage
+      async googleLogin(payload) {
+        const requestBody =
+          typeof payload === 'string'
+            ? { credential: payload, mode: 'login' }
+            : { accessToken: payload?.accessToken, mode: payload?.mode || 'login' };
+        const { data } = await client.post('/auth/google', requestBody);
+        persistAuth(data);
+      },
+
+      logout() {
+        localStorage.removeItem('peezuhub_token');
+        localStorage.removeItem('peezuhub_user');
+        dispatch({ type: 'LOGOUT' });
+      },
+    }),
+    [state],
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

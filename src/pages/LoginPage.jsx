@@ -1,3 +1,5 @@
+// FIX #1 – Better error messages for Google login failure.
+
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -26,20 +28,25 @@ export default function LoginPage() {
   async function onSubmit(values) {
     try {
       await login(values);
-      toast.success('Welcome back');
+      toast.success('Welcome back!');
       navigate(destination, { replace: true });
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Login failed');
+      toast.error(err.response?.data?.message || 'Login failed. Please check your credentials.');
     }
   }
 
   async function handleGoogleLogin({ accessToken }) {
     try {
       await googleLogin({ accessToken, mode: 'login' });
-      toast.success('Google login successful');
+      toast.success('Google login successful!');
       navigate(destination, { replace: true });
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Google login failed');
+      // Provide a helpful, specific message when possible
+      const msg =
+        err.response?.data?.message ||
+        err.message ||
+        'Google login failed. Please try again.';
+      toast.error(msg);
     }
   }
 
@@ -66,13 +73,20 @@ export default function LoginPage() {
         </div>
 
         <div>
-          <input type="password" className="input" placeholder="Password" {...form.register('password')} />
+          <input
+            type="password"
+            className="input"
+            placeholder="Password"
+            {...form.register('password')}
+          />
           {form.formState.errors.password && (
             <p className="mt-2 text-sm text-red-600">{form.formState.errors.password.message}</p>
           )}
         </div>
 
-        <button className="btn-primary w-full" type="submit">Login</button>
+        <button className="btn-primary w-full" type="submit">
+          Login
+        </button>
       </form>
 
       <div className="flex items-center gap-3">
@@ -84,7 +98,13 @@ export default function LoginPage() {
       <GoogleAuthButton
         mode="login"
         onAuthenticated={handleGoogleLogin}
-        onError={(error) => toast.error(error?.response?.data?.message || error?.message || 'Google login failed')}
+        onError={(error) =>
+          toast.error(
+            error?.response?.data?.message ||
+              error?.message ||
+              'Google login failed. Please try again.',
+          )
+        }
       />
     </AuthShell>
   );

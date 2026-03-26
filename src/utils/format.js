@@ -6,11 +6,20 @@ export function money(value = 0) {
   }).format(value);
 }
 
-export function whatsappLink(number, text = 'Hello, I found your service on PeezuHub.') {
+export function whatsappLink(number, text = 'Hello, I found your listing on PeezuHub. Is it still available?') {
   const clean = (number || '').replace(/[^\d]/g, '');
   return `https://wa.me/${clean}?text=${encodeURIComponent(text)}`;
 }
 
 export function truncate(text = '', max = 120) {
   return text.length > max ? `${text.slice(0, max)}...` : text;
+}
+
+export function formatDate(value) {
+  if (!value) return '';
+  return new Intl.DateTimeFormat('en-NG', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  }).format(new Date(value));
 }

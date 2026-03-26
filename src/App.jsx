@@ -19,6 +19,7 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/explore" element={<ExplorePage />} />
         <Route path="/services/:id" element={<ServiceDetailPage />} />
+        <Route path="/listings/:id" element={<ServiceDetailPage />} />
         <Route path="/post-service" element={<ProtectedRoute><PostServicePage /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute adminOnly><AdminDashboardPage /></ProtectedRoute>} />

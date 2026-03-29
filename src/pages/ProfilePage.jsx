@@ -169,14 +169,21 @@ export default function ProfilePage() {
         </div>
 
         <div className="grid gap-3 lg:w-[300px]">
-          <button
-            className="btn-primary w-full"
-            onClick={handleUpgrade}
-            disabled={actionLoadingKey === 'account:upgrade' || premiumActive || premiumPending}
-          >
-            <Sparkles size={18} />
-            {premiumActive ? 'Premium Active' : premiumPending ? 'Upgrade Pending' : 'Upgrade Account'}
-          </button>
+          {!premiumActive && !premiumPending && (
+            <button
+              className="btn-primary w-full"
+              onClick={handleUpgrade}
+              disabled={actionLoadingKey === 'account:upgrade'}
+            >
+              <Sparkles size={18} />
+              Upgrade Account
+            </button>
+          )}
+          {premiumPending && (
+            <div className="rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+              Your premium payment is pending verification. The upgrade button will reappear only if this payment does not complete.
+            </div>
+          )}
           <button className="btn-secondary w-full" onClick={logout}>
             <LogOut size={18} />
             Logout

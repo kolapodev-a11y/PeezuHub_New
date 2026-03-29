@@ -16,21 +16,26 @@ import { useAuth } from '../context/AuthContext';
 
 const reviewSchema = z.object({
   rating: z.coerce.number().min(1).max(5),
-  comment: z.string().min(5),
+  comment: z.string().trim().min(5, 'Please add a short review'),
 });
 
 const reportSchema = z.object({
-  reporterName: z.string().min(2),
-  reporterEmail: z.string().email().optional().or(z.literal('')),
-  reason: z.string().min(5),
+  reporterName: z.string().trim().min(2, 'Enter your name'),
+  reporterEmail: z.string().trim().email('Enter a valid email address').optional().or(z.literal('')),
+  reason: z.string().trim().min(5, 'Explain why you are reporting this listing'),
 });
 
 const contactSchema = z.object({
-  senderName: z.string().min(2),
-  senderEmail: z.string().email().optional().or(z.literal('')),
+  senderName: z.string().trim().min(2, 'Enter your name'),
+  senderEmail: z.string().trim().email('Enter a valid email address').optional().or(z.literal('')),
   senderPhone: z.string().optional(),
-  message: z.string().min(5),
+  message: z.string().trim().min(5, 'Enter a message before sending'),
 });
+
+function FieldError({ message }) {
+  if (!message) return null;
+  return <p className="text-sm text-rose-600">{message}</p>;
+}
 
 export default function ServiceDetailPage() {
   const { id } = useParams();
@@ -55,6 +60,9 @@ export default function ServiceDetailPage() {
   const isSold = listing.saleStatus === 'sold';
   const disableBuyerActions = isSold && !isOwner;
   const canContactSeller = !disableBuyerActions && !isOwner;
+  const contactSubmitting = contactForm.formState.isSubmitting;
+  const reportSubmitting = reportForm.formState.isSubmitting;
+  const reviewSubmitting = reviewForm.formState.isSubmitting;
 
   async function submitReview(values) {
     try {
@@ -171,7 +179,8 @@ export default function ServiceDetailPage() {
                 {[5, 4, 3, 2, 1].map((value) => <option key={value} value={value}>{value} Star</option>)}
               </select>
               <textarea className="input min-h-[120px]" placeholder="Share your buying experience" {...reviewForm.register('comment')} />
-              <button className="btn-primary" type="submit">Submit review</button>
+              <FieldError message={reviewForm.formState.errors.comment?.message} />
+              <button className="btn-primary" type="submit" disabled={reviewSubmitting}>{reviewSubmitting ? 'Submitting...' : 'Submit review'}</button>
             </form>
           ) : (
             <div className="rounded-3xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-600">
@@ -189,7 +198,7 @@ export default function ServiceDetailPage() {
               {isOwner ? 'This is your listing' : 'This listing is sold'}
             </button>
           ) : (
-            <a className="btn-primary w-full gap-2" href={whatsappLink(listing.contact?.whatsapp, `Hello, I found your listing "${listing.title}" on PeezuHub. Is it still available?`)} target="_blank" rel="noreferrer">
+            <a className="btn-primary w-full gap-2" href={whatsappLink(listing.contact?.whatsapp, `Hello, I found your listing \"${listing.title}\" on PeezuHub. Is it still available?`)} target="_blank" rel="noreferrer">
               <Send size={18} /> WhatsApp Direct Link
             </a>
           )}
@@ -198,10 +207,13 @@ export default function ServiceDetailPage() {
             <form className="space-y-3" onSubmit={contactForm.handleSubmit(submitContact)}>
               <h3 className="font-semibold">In-app buyer message</h3>
               <input className="input" placeholder="Your name" {...contactForm.register('senderName')} />
+              <FieldError message={contactForm.formState.errors.senderName?.message} />
               <input className="input" placeholder="Your email (optional)" {...contactForm.register('senderEmail')} />
+              <FieldError message={contactForm.formState.errors.senderEmail?.message} />
               <input className="input" placeholder="Phone (optional)" {...contactForm.register('senderPhone')} />
               <textarea className="input min-h-[120px]" placeholder="Hi, I'm interested in buying this. Is it still available?" {...contactForm.register('message')} />
-              <button className="btn-secondary w-full" type="submit">Send message</button>
+              <FieldError message={contactForm.formState.errors.message?.message} />
+              <button className="btn-secondary w-full" type="submit" disabled={contactSubmitting}>{contactSubmitting ? 'Sending...' : 'Send message'}</button>
             </form>
           )}
 
@@ -213,9 +225,12 @@ export default function ServiceDetailPage() {
             <form className="space-y-3 rounded-3xl border border-rose-100 bg-rose-50 p-4" onSubmit={reportForm.handleSubmit(submitReport)}>
               <div className="flex items-center gap-2 text-rose-700"><ShieldAlert size={18} /><h3 className="font-semibold">Report Listing</h3></div>
               <input className="input" placeholder="Your name" {...reportForm.register('reporterName')} />
+              <FieldError message={reportForm.formState.errors.reporterName?.message} />
               <input className="input" placeholder="Your email (optional)" {...reportForm.register('reporterEmail')} />
+              <FieldError message={reportForm.formState.errors.reporterEmail?.message} />
               <textarea className="input min-h-[110px]" placeholder="Why are you reporting this listing?" {...reportForm.register('reason')} />
-              <button className="btn-secondary w-full border-rose-200 bg-white text-rose-700" type="submit"><MessageCircleWarning size={18} /> Report User/Listing</button>
+              <FieldError message={reportForm.formState.errors.reason?.message} />
+              <button className="btn-secondary w-full border-rose-200 bg-white text-rose-700" type="submit" disabled={reportSubmitting}><MessageCircleWarning size={18} /> {reportSubmitting ? 'Sending report...' : 'Report User/Listing'}</button>
             </form>
           )}
         </div>

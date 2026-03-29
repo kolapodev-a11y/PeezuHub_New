@@ -19,7 +19,7 @@ export default function PaymentCallbackPage() {
       }
 
       try {
-        const { data } = await client.get(`/payments/paystack/verify/${reference}`);
+        const { data } = await client.get(`/payments/paystack/verify/${reference}`, { timeout: 15000 });
         if (data.payment?.status === 'success') {
           await refreshUser();
           setStatus('success');
@@ -30,7 +30,9 @@ export default function PaymentCallbackPage() {
         }
       } catch (err) {
         setStatus('error');
-        setMessage(err.response?.data?.message || 'Unable to verify payment. Please try again.');
+        setMessage(err.code === 'ECONNABORTED'
+          ? 'Payment verification took too long. Please refresh this page in a few seconds or check your profile for the latest premium status.'
+          : err.response?.data?.message || 'Unable to verify payment. Please try again.');
       }
     }
 

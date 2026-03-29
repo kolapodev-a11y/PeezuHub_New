@@ -88,17 +88,19 @@ export default function ManageListingCard({
             <Tag size={16} />
             {isSold ? 'Mark Available' : 'Mark as Sold'}
           </button>
+          {!accountPremiumActive && !accountPremiumPending && (
+            <button
+              className="btn-primary"
+              type="button"
+              onClick={onUpgrade}
+              disabled={actionLoading}
+            >
+              <Star size={16} />
+              Upgrade Account
+            </button>
+          )}
           <button
-            className="btn-primary"
-            type="button"
-            onClick={onUpgrade}
-            disabled={actionLoading || accountPremiumActive || accountPremiumPending}
-          >
-            <Star size={16} />
-            {accountPremiumActive ? 'Premium Active' : accountPremiumPending ? 'Upgrade Pending' : 'Upgrade Account'}
-          </button>
-          <button
-            className="btn-secondary sm:col-span-2 border-rose-200 bg-white text-rose-700"
+            className="btn-secondary border-rose-200 bg-white text-rose-700 sm:col-span-2"
             type="button"
             onClick={() => onDelete(listing)}
             disabled={actionLoading}

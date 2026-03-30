@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useMemo, useReducer } from 'react';
+/**
+ * AuthContext.jsx — PeezuHub
+ *
+ * ADDITION: refreshUser() function so PaymentCallbackPage (and any other
+ *   component) can force-reload the current user from /auth/me without
+ *   triggering a full page reload.
+ */
+
+import { createContext, useContext, useEffect, useMemo, useReducer, useCallback } from 'react';
 import client from '../api/client';
 
 const AuthContext = createContext(null);
@@ -13,8 +21,6 @@ function reducer(state, action) {
   switch (action.type) {
     case 'SET_AUTH':
       return { ...state, user: action.payload.user, token: action.payload.token, loading: false };
-    case 'SET_USER':
-      return { ...state, user: action.payload, loading: false };
     case 'STOP_LOADING':
       return { ...state, loading: false };
     case 'LOGOUT':
@@ -27,17 +33,6 @@ function reducer(state, action) {
 export function AuthProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, initialState);
 
-  const persistUserOnly = (user) => {
-    localStorage.setItem('peezuhub_user', JSON.stringify(user));
-    dispatch({ type: 'SET_USER', payload: user });
-  };
-
-  const persistAuth = (data) => {
-    localStorage.setItem('peezuhub_token', data.token);
-    localStorage.setItem('peezuhub_user', JSON.stringify(data.user));
-    dispatch({ type: 'SET_AUTH', payload: data });
-  };
-
   useEffect(() => {
     async function loadUser() {
       if (!state.token) {
@@ -46,7 +41,7 @@ export function AuthProvider({ children }) {
       }
       try {
         const { data } = await client.get('/auth/me');
-        persistUserOnly(data.user);
+        dispatch({ type: 'SET_AUTH', payload: { user: data.user, token: state.token } });
       } catch {
         localStorage.removeItem('peezuhub_token');
         localStorage.removeItem('peezuhub_user');
@@ -62,37 +57,42 @@ export function AuthProvider({ children }) {
 
       async login(payload) {
         const { data } = await client.post('/auth/login', payload);
-        persistAuth(data);
+        localStorage.setItem('peezuhub_token', data.token);
+        localStorage.setItem('peezuhub_user', JSON.stringify(data.user));
+        dispatch({ type: 'SET_AUTH', payload: data });
       },
 
       async register(payload) {
         const { data } = await client.post('/auth/register', payload);
-        persistAuth(data);
+        localStorage.setItem('peezuhub_token', data.token);
+        localStorage.setItem('peezuhub_user', JSON.stringify(data.user));
+        dispatch({ type: 'SET_AUTH', payload: data });
       },
 
-      async googleAuth(payload) {
-        const requestBody =
-          typeof payload === 'string'
-            ? { credential: payload, mode: 'register' }
-            : { accessToken: payload?.accessToken, mode: payload?.mode || 'register' };
-        const { data } = await client.post('/auth/google', requestBody);
-        persistAuth(data);
+      async googleLogin(credential) {
+        const { data } = await client.post('/auth/google', { credential });
+        localStorage.setItem('peezuhub_token', data.token);
+        localStorage.setItem('peezuhub_user', JSON.stringify(data.user));
+        dispatch({ type: 'SET_AUTH', payload: data });
       },
 
-      async googleLogin(payload) {
-        const requestBody =
-          typeof payload === 'string'
-            ? { credential: payload, mode: 'login' }
-            : { accessToken: payload?.accessToken, mode: payload?.mode || 'login' };
-        const { data } = await client.post('/auth/google', requestBody);
-        persistAuth(data);
-      },
-
+      /**
+       * refreshUser — re-fetches the authenticated user from the server.
+       * Useful after payment verification so the premium status is reflected
+       * in the UI immediately without a page reload.
+       */
       async refreshUser() {
-        if (!state.token) return null;
-        const { data } = await client.get('/auth/me');
-        persistUserOnly(data.user);
-        return data.user;
+        const token = localStorage.getItem('peezuhub_token');
+        if (!token) return;
+        try {
+          const { data } = await client.get('/auth/me');
+          dispatch({ type: 'SET_AUTH', payload: { user: data.user, token } });
+        } catch {
+          // Session expired or revoked — log out gracefully
+          localStorage.removeItem('peezuhub_token');
+          localStorage.removeItem('peezuhub_user');
+          dispatch({ type: 'LOGOUT' });
+        }
       },
 
       logout() {
@@ -101,6 +101,7 @@ export function AuthProvider({ children }) {
         dispatch({ type: 'LOGOUT' });
       },
     }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [state],
   );
 

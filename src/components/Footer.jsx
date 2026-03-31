@@ -1,8 +1,20 @@
 import { Link } from 'react-router-dom';
 import { Mail, Globe, ShieldCheck, MessageCircle } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function Footer() {
   const year = new Date().getFullYear();
+  const { user } = useAuth();
+
+  const quickLinks = [
+    { label: 'Home', to: '/' },
+    { label: 'Explore Listings', to: '/explore' },
+    { label: 'Post a Listing', to: '/post-service' },
+    ...(user ? [{ label: 'My Profile', to: '/profile' }] : [
+      { label: 'Login', to: '/login' },
+      { label: 'Register', to: '/register' },
+    ]),
+  ];
 
   return (
     <footer className="bg-slate-900 text-slate-300">
@@ -27,13 +39,7 @@ export default function Footer() {
           <div className="space-y-4">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-100">Quick Links</h3>
             <ul className="space-y-2 text-sm">
-              {[
-                { label: 'Home', to: '/' },
-                { label: 'Explore Listings', to: '/explore' },
-                { label: 'Post a Listing', to: '/post-service' },
-                { label: 'Login', to: '/login' },
-                { label: 'Register', to: '/register' },
-              ].map(({ label, to }) => (
+              {quickLinks.map(({ label, to }) => (
                 <li key={to}>
                   <Link to={to} className="text-slate-400 transition hover:text-white">
                     {label}

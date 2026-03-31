@@ -76,7 +76,7 @@ export default function Navbar() {
   }, [location.pathname]);
 
   useEffect(() => {
-    if (!user || user.role !== 'admin') {
+    if (!user) {
       setUnreadCount(0);
       return;
     }
@@ -100,7 +100,7 @@ export default function Navbar() {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user, location.pathname]);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -125,7 +125,7 @@ export default function Navbar() {
   function openNotifications() {
     setMobileMenuOpen(false);
     setProfileMenuOpen(false);
-    navigate(user?.role === 'admin' ? '/admin' : '/profile');
+    navigate(user?.role === 'admin' ? '/admin?tab=notifications' : '/profile?tab=notifications');
   }
 
   function handleLogout() {
@@ -200,10 +200,10 @@ export default function Navbar() {
           <div className="flex-1">
             <p className="font-semibold">Notifications</p>
             <p className="text-xs text-slate-500">
-              {user?.role === 'admin' ? 'Review admin alerts and moderation activity' : 'Check your latest account activity'}
+              {user?.role === 'admin' ? 'Review admin alerts and moderation activity' : 'Open your latest buyer and account activity'}
             </p>
           </div>
-          {user?.role === 'admin' && unreadCount > 0 && (
+          {unreadCount > 0 && (
             <span className="rounded-full bg-rose-500 px-2 py-0.5 text-[11px] font-bold text-white">{notificationBadge}</span>
           )}
         </button>
@@ -304,7 +304,7 @@ export default function Navbar() {
               title="Notifications"
             >
               <Bell size={18} />
-              {user.role === 'admin' && unreadCount > 0 && (
+              {unreadCount > 0 && (
                 <span className="absolute right-1.5 top-1.5 min-w-[1.1rem] rounded-full bg-rose-500 px-1 py-0.5 text-center text-[10px] font-bold leading-none text-white shadow-sm">
                   {notificationBadge}
                 </span>
@@ -406,7 +406,7 @@ export default function Navbar() {
                   >
                     <div className="relative">
                       <Bell size={18} />
-                      {user.role === 'admin' && unreadCount > 0 && (
+                      {unreadCount > 0 && (
                         <span className="absolute -right-2 -top-2 min-w-[1rem] rounded-full bg-rose-500 px-1 py-0.5 text-center text-[10px] font-bold leading-none text-white">
                           {notificationBadge}
                         </span>

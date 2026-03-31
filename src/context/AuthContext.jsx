@@ -1,11 +1,3 @@
-/**
- * AuthContext.jsx — PeezuHub
- *
- * ADDITION: refreshUser() function so PaymentCallbackPage (and any other
- *   component) can force-reload the current user from /auth/me without
- *   triggering a full page reload.
- */
-
 import { createContext, useContext, useEffect, useMemo, useReducer, useCallback } from 'react';
 import client from '../api/client';
 
@@ -20,7 +12,12 @@ const initialState = {
 function reducer(state, action) {
   switch (action.type) {
     case 'SET_AUTH':
-      return { ...state, user: action.payload.user, token: action.payload.token, loading: false };
+      return {
+        ...state,
+        user: action.payload.user,
+        token: action.payload.token,
+        loading: false,
+      };
     case 'STOP_LOADING':
       return { ...state, loading: false };
     case 'LOGOUT':
@@ -28,6 +25,36 @@ function reducer(state, action) {
     default:
       return state;
   }
+}
+
+function persistAuth(data) {
+  localStorage.setItem('peezuhub_token', data.token);
+  localStorage.setItem('peezuhub_user', JSON.stringify(data.user));
+}
+
+function clearAuth() {
+  localStorage.removeItem('peezuhub_token');
+  localStorage.removeItem('peezuhub_user');
+}
+
+function normalizeGooglePayload(payload = {}) {
+  const nested = payload && typeof payload === 'object' ? payload : {};
+
+  return {
+    accessToken:
+      nested.accessToken ||
+      nested.access_token ||
+      nested.token ||
+      (typeof nested.credential === 'object' ? nested.credential?.accessToken : undefined) ||
+      '',
+    credential:
+      typeof nested.credential === 'string'
+        ? nested.credential
+        : typeof nested.idToken === 'string'
+        ? nested.idToken
+        : '',
+    mode: nested.mode === 'register' ? 'register' : 'login',
+  };
 }
 
 export function AuthProvider({ children }) {
@@ -39,70 +66,72 @@ export function AuthProvider({ children }) {
         dispatch({ type: 'STOP_LOADING' });
         return;
       }
+
       try {
         const { data } = await client.get('/auth/me');
         dispatch({ type: 'SET_AUTH', payload: { user: data.user, token: state.token } });
       } catch {
-        localStorage.removeItem('peezuhub_token');
-        localStorage.removeItem('peezuhub_user');
+        clearAuth();
         dispatch({ type: 'LOGOUT' });
       }
     }
+
     loadUser();
   }, [state.token]);
+
+  const login = useCallback(async (payload) => {
+    const { data } = await client.post('/auth/login', payload);
+    persistAuth(data);
+    dispatch({ type: 'SET_AUTH', payload: data });
+    return data;
+  }, []);
+
+  const register = useCallback(async (payload) => {
+    const { data } = await client.post('/auth/register', payload);
+    persistAuth(data);
+    dispatch({ type: 'SET_AUTH', payload: data });
+    return data;
+  }, []);
+
+  const googleAuth = useCallback(async (payload = {}) => {
+    const normalized = normalizeGooglePayload(payload);
+    const { data } = await client.post('/auth/google', normalized);
+    persistAuth(data);
+    dispatch({ type: 'SET_AUTH', payload: data });
+    return data;
+  }, []);
+
+  const refreshUser = useCallback(async () => {
+    const token = localStorage.getItem('peezuhub_token');
+    if (!token) return null;
+
+    try {
+      const { data } = await client.get('/auth/me');
+      dispatch({ type: 'SET_AUTH', payload: { user: data.user, token } });
+      return data.user;
+    } catch {
+      clearAuth();
+      dispatch({ type: 'LOGOUT' });
+      return null;
+    }
+  }, []);
+
+  const logout = useCallback(() => {
+    clearAuth();
+    dispatch({ type: 'LOGOUT' });
+  }, []);
 
   const value = useMemo(
     () => ({
       ...state,
-
-      async login(payload) {
-        const { data } = await client.post('/auth/login', payload);
-        localStorage.setItem('peezuhub_token', data.token);
-        localStorage.setItem('peezuhub_user', JSON.stringify(data.user));
-        dispatch({ type: 'SET_AUTH', payload: data });
-      },
-
-      async register(payload) {
-        const { data } = await client.post('/auth/register', payload);
-        localStorage.setItem('peezuhub_token', data.token);
-        localStorage.setItem('peezuhub_user', JSON.stringify(data.user));
-        dispatch({ type: 'SET_AUTH', payload: data });
-      },
-
-      async googleLogin(credential) {
-        const { data } = await client.post('/auth/google', { credential });
-        localStorage.setItem('peezuhub_token', data.token);
-        localStorage.setItem('peezuhub_user', JSON.stringify(data.user));
-        dispatch({ type: 'SET_AUTH', payload: data });
-      },
-
-      /**
-       * refreshUser — re-fetches the authenticated user from the server.
-       * Useful after payment verification so the premium status is reflected
-       * in the UI immediately without a page reload.
-       */
-      async refreshUser() {
-        const token = localStorage.getItem('peezuhub_token');
-        if (!token) return;
-        try {
-          const { data } = await client.get('/auth/me');
-          dispatch({ type: 'SET_AUTH', payload: { user: data.user, token } });
-        } catch {
-          // Session expired or revoked — log out gracefully
-          localStorage.removeItem('peezuhub_token');
-          localStorage.removeItem('peezuhub_user');
-          dispatch({ type: 'LOGOUT' });
-        }
-      },
-
-      logout() {
-        localStorage.removeItem('peezuhub_token');
-        localStorage.removeItem('peezuhub_user');
-        dispatch({ type: 'LOGOUT' });
-      },
+      login,
+      register,
+      googleAuth,
+      googleLogin: googleAuth,
+      refreshUser,
+      logout,
     }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [state],
+    [state, login, register, googleAuth, refreshUser, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

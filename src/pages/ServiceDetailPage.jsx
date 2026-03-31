@@ -28,7 +28,11 @@ const reportSchema = z.object({
 const contactSchema = z.object({
   senderName: z.string().trim().min(2, 'Enter your name'),
   senderEmail: z.string().trim().email('Enter a valid email address').optional().or(z.literal('')),
-  senderPhone: z.string().optional(),
+  senderPhone: z
+    .string()
+    .trim()
+    .min(7, 'Phone number is required')
+    .refine((value) => value.replace(/\D/g, '').length >= 10, 'Enter a valid phone number'),
   message: z.string().trim().min(5, 'Enter a message before sending'),
 });
 
@@ -48,7 +52,15 @@ export default function ServiceDetailPage() {
 
   const reviewForm = useForm({ resolver: zodResolver(reviewSchema), defaultValues: { rating: 5, comment: '' } });
   const reportForm = useForm({ resolver: zodResolver(reportSchema), defaultValues: { reporterName: user?.name || '', reporterEmail: user?.email || '', reason: '' } });
-  const contactForm = useForm({ resolver: zodResolver(contactSchema), defaultValues: { senderName: user?.name || '', senderEmail: user?.email || '', senderPhone: '', message: '' } });
+  const contactForm = useForm({
+    resolver: zodResolver(contactSchema),
+    defaultValues: {
+      senderName: user?.name || '',
+      senderEmail: user?.email || '',
+      senderPhone: '',
+      message: '',
+    },
+  });
 
   if (loading) return <Loader label="Loading listing details..." />;
   if (error) return <div className="card text-rose-600">{error}</div>;
@@ -205,12 +217,18 @@ export default function ServiceDetailPage() {
 
           {canContactSeller && (
             <form className="space-y-3" onSubmit={contactForm.handleSubmit(submitContact)}>
-              <h3 className="font-semibold">In-app buyer message</h3>
+              <div>
+                <h3 className="font-semibold">In-app buyer message</h3>
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  Phone number and message are compulsory so the seller can reply quickly by WhatsApp, call or directly from your enquiry card.
+                </p>
+              </div>
               <input className="input" placeholder="Your name" {...contactForm.register('senderName')} />
               <FieldError message={contactForm.formState.errors.senderName?.message} />
               <input className="input" placeholder="Your email (optional)" {...contactForm.register('senderEmail')} />
               <FieldError message={contactForm.formState.errors.senderEmail?.message} />
-              <input className="input" placeholder="Phone (optional)" {...contactForm.register('senderPhone')} />
+              <input className="input" placeholder="Phone number (required)" {...contactForm.register('senderPhone')} />
+              <FieldError message={contactForm.formState.errors.senderPhone?.message} />
               <textarea className="input min-h-[120px]" placeholder="Hi, I'm interested in buying this. Is it still available?" {...contactForm.register('message')} />
               <FieldError message={contactForm.formState.errors.message?.message} />
               <button className="btn-secondary w-full" type="submit" disabled={contactSubmitting}>{contactSubmitting ? 'Sending...' : 'Send message'}</button>

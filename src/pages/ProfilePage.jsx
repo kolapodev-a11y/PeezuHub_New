@@ -1,15 +1,22 @@
-import { useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
+  Bell,
   CalendarDays,
+  CheckCheck,
   Crown,
+  ExternalLink,
   LayoutGrid,
   LogOut,
   Mail,
+  MessageCircle,
   MessageSquareText,
+  Phone,
   ShieldCheck,
   Sparkles,
   TrendingUp,
+  UserRound,
+  X,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import client from '../api/client';
@@ -19,6 +26,7 @@ import ManageListingCard from '../components/ManageListingCard';
 import ListingEditorModal from '../components/ListingEditorModal';
 import useFetch from '../hooks/useFetch';
 import { useAuth } from '../context/AuthContext';
+import { formatDate, whatsappLink } from '../utils/format';
 
 function isPremiumActive(user) {
   return Boolean(
@@ -32,23 +40,50 @@ function isPremiumPending(user) {
   return user?.premiumStatus === 'pending';
 }
 
+function formatDateTime(value) {
+  if (!value) return '—';
+  return new Intl.DateTimeFormat('en-NG', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date(value));
+}
+
 export default function ProfilePage() {
   const { user, logout, refreshUser } = useAuth();
   const [params] = useSearchParams();
   const [editingListing, setEditingListing] = useState(null);
+  const [selectedInquiry, setSelectedInquiry] = useState(null);
   const [actionLoadingKey, setActionLoadingKey] = useState('');
+  const notificationsRef = useRef(null);
 
   const { data, loading, error, setData } = useFetch(async () => {
-    const [listingsRes, inboxRes] = await Promise.all([
+    const [listingsRes, inboxRes, notificationsRes] = await Promise.all([
       client.get('/listings/mine'),
       client.get('/messages/inbox'),
+      client.get('/notifications'),
     ]);
-    return { listings: listingsRes.data, inbox: inboxRes.data };
+
+    return {
+      listings: listingsRes.data,
+      inbox: inboxRes.data,
+      notifications: notificationsRes.data.notifications || [],
+      unreadCount: notificationsRes.data.unreadCount || 0,
+    };
   }, []);
 
   const upgradeRequested = params.get('upgrade') === '1';
+  const focusNotifications = params.get('tab') === 'notifications';
   const premiumActive = isPremiumActive(user);
   const premiumPending = isPremiumPending(user);
+
+  useEffect(() => {
+    if (focusNotifications && notificationsRef.current) {
+      notificationsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [focusNotifications, data?.notifications?.length]);
 
   const stats = useMemo(() => {
     const listings = data?.listings || [];
@@ -93,6 +128,7 @@ export default function ProfilePage() {
       setActionLoadingKey(loadingKey);
       await client.delete(`/listings/${listing._id}`);
       setData((current) => ({
+        ...current,
         listings: current.listings.filter((item) => item._id !== listing._id),
         inbox: current.inbox.filter((item) => item.listing?._id !== listing._id),
       }));
@@ -125,6 +161,38 @@ export default function ProfilePage() {
     await refreshUser();
     setEditingListing(null);
   }
+
+  async function markNotificationRead(id) {
+    try {
+      await client.patch(`/notifications/${id}/read`);
+      setData((current) => ({
+        ...current,
+        notifications: (current.notifications || []).map((item) =>
+          item._id === id ? { ...item, isRead: true } : item
+        ),
+        unreadCount: Math.max(0, (current.unreadCount || 0) - 1),
+      }));
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not mark notification as read.');
+    }
+  }
+
+  async function markAllNotificationsRead() {
+    try {
+      await client.patch('/notifications/read-all');
+      setData((current) => ({
+        ...current,
+        notifications: (current.notifications || []).map((item) => ({ ...item, isRead: true })),
+        unreadCount: 0,
+      }));
+      toast.success('All notifications marked as read.');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to mark all notifications as read.');
+    }
+  }
+
+  const notifications = data?.notifications || [];
+  const inbox = data?.inbox || [];
 
   return (
     <div className="space-y-6">
@@ -236,17 +304,107 @@ export default function ProfilePage() {
 
           <div className="space-y-4">
             <SafetyBanner />
-            <div className="card space-y-4">
-              <h2 className="inline-flex items-center gap-2 text-xl font-bold"><MessageSquareText size={20} /> Contact Requests</h2>
+
+            <div ref={notificationsRef} className={`card space-y-4 ${focusNotifications ? 'ring-2 ring-brand-200 ring-offset-2' : ''}`}>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="inline-flex items-center gap-2 text-xl font-bold"><Bell size={20} /> Notifications</h2>
+                  <p className="mt-1 text-sm text-slate-500">Your latest buyer activity and account alerts appear here.</p>
+                </div>
+                {!!data?.unreadCount && (
+                  <button type="button" onClick={markAllNotificationsRead} className="btn-secondary">
+                    <CheckCheck size={16} /> Mark all read
+                  </button>
+                )}
+              </div>
+
               <div className="space-y-3">
-                {data?.inbox?.map((item) => (
-                  <div key={item._id} className="rounded-3xl border border-slate-100 p-4 text-sm">
-                    <p className="font-semibold text-slate-900">{item.senderName} {item.listing?.title ? `• ${item.listing.title}` : ''}</p>
-                    <p className="mt-2 leading-6 text-slate-600">{item.message}</p>
-                    <p className="mt-3 text-xs text-slate-500">Email: {item.senderEmail || '-'} · Phone: {item.senderPhone || '-'}</p>
+                {notifications.map((item) => (
+                  <div key={item._id} className={`rounded-3xl border p-4 text-sm ${item.isRead ? 'border-slate-100 bg-white' : 'border-brand-100 bg-brand-50/40'}`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-slate-900">{item.title}</p>
+                        <p className="mt-2 leading-6 text-slate-600">{item.message}</p>
+                        <p className="mt-3 text-xs text-slate-500">{formatDateTime(item.createdAt)}</p>
+                      </div>
+                      {!item.isRead && (
+                        <button type="button" onClick={() => markNotificationRead(item._id)} className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-brand-700 shadow-sm ring-1 ring-brand-100">
+                          Mark read
+                        </button>
+                      )}
+                    </div>
+                    {item.meta?.listingId && (
+                      <div className="mt-3">
+                        <Link to={`/listings/${item.meta.listingId}`} className="inline-flex items-center gap-2 text-xs font-semibold text-brand-700 hover:text-brand-800">
+                          Open related listing <ExternalLink size={14} />
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 ))}
-                {!data?.inbox?.length && <div className="rounded-3xl border border-slate-100 p-4 text-sm text-slate-500">No buyer enquiries yet.</div>}
+                {!notifications.length && <div className="rounded-3xl border border-slate-100 p-4 text-sm text-slate-500">No notifications yet.</div>}
+              </div>
+            </div>
+
+            <div className="card space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="inline-flex items-center gap-2 text-xl font-bold"><MessageSquareText size={20} /> Contact Requests</h2>
+                  <p className="mt-1 text-sm text-slate-500">Click a buyer profile to open a cleaner view and contact them quickly.</p>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {inbox.map((item) => (
+                  <div key={item._id} className="rounded-3xl border border-slate-100 p-4 text-sm">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedInquiry(item)}
+                          className="text-left font-semibold text-slate-900 transition hover:text-brand-700"
+                        >
+                          {item.senderName} {item.listing?.title ? `• ${item.listing.title}` : ''}
+                        </button>
+                        <p className="mt-2 leading-6 text-slate-600">{item.message}</p>
+                        <p className="mt-3 text-xs text-slate-500">
+                          Email: {item.senderEmail || 'Not provided'} · Phone: {item.senderPhone || 'Not provided'} · Sent: {formatDateTime(item.createdAt)}
+                        </p>
+                      </div>
+                      <button type="button" onClick={() => setSelectedInquiry(item)} className="btn-secondary whitespace-nowrap">
+                        <UserRound size={16} /> Buyer profile
+                      </button>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {item.senderPhone && (
+                        <a
+                          className="btn-primary"
+                          href={whatsappLink(item.senderPhone, `Hello ${item.senderName}, I received your PeezuHub contact request about \"${item.listing?.title || 'my listing'}\".`)}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <MessageCircle size={16} /> WhatsApp buyer
+                        </a>
+                      )}
+                      {item.senderPhone && (
+                        <a className="btn-secondary" href={`tel:${item.senderPhone}`}>
+                          <Phone size={16} /> Call buyer
+                        </a>
+                      )}
+                      {item.senderEmail && (
+                        <a className="btn-secondary" href={`mailto:${item.senderEmail}?subject=${encodeURIComponent(`PeezuHub enquiry: ${item.listing?.title || 'your request'}`)}`}>
+                          <Mail size={16} /> Email buyer
+                        </a>
+                      )}
+                      {item.listing?._id && (
+                        <Link className="btn-secondary" to={`/listings/${item.listing._id}`}>
+                          <ExternalLink size={16} /> View listing
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {!inbox.length && <div className="rounded-3xl border border-slate-100 p-4 text-sm text-slate-500">No buyer enquiries yet.</div>}
               </div>
             </div>
           </div>
@@ -259,6 +417,74 @@ export default function ProfilePage() {
           onClose={() => setEditingListing(null)}
           onSaved={handleSavedListing}
         />
+      )}
+
+      {selectedInquiry && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 p-4 sm:items-center">
+          <div className="w-full max-w-lg overflow-hidden rounded-[2rem] bg-white shadow-[0_30px_100px_rgba(15,23,42,0.28)]">
+            <div className="flex items-start justify-between gap-4 bg-gradient-to-br from-brand-700 via-brand-600 to-sky-500 p-5 text-white">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-100">Buyer profile</p>
+                <h3 className="mt-2 text-xl font-bold">{selectedInquiry.senderName}</h3>
+                <p className="mt-1 text-sm text-blue-50/90">For listing: {selectedInquiry.listing?.title || 'PeezuHub enquiry'}</p>
+              </div>
+              <button type="button" onClick={() => setSelectedInquiry(null)} className="rounded-full bg-white/15 p-2 text-white transition hover:bg-white/25">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-5 p-5">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-3xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-600">
+                  <p className="font-semibold text-slate-900">Buyer details</p>
+                  <p className="mt-3">Name: {selectedInquiry.senderName}</p>
+                  <p className="mt-2 break-all">Email: {selectedInquiry.senderEmail || 'Not provided'}</p>
+                  <p className="mt-2">Phone: {selectedInquiry.senderPhone || 'Not provided'}</p>
+                </div>
+                <div className="rounded-3xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-600">
+                  <p className="font-semibold text-slate-900">Account snapshot</p>
+                  <p className="mt-3">Signed in user: {selectedInquiry.fromUser ? 'Yes' : 'Guest enquiry'}</p>
+                  <p className="mt-2">Role: {selectedInquiry.fromUser?.role || 'Buyer'}</p>
+                  <p className="mt-2">Joined: {selectedInquiry.fromUser?.createdAt ? formatDate(selectedInquiry.fromUser.createdAt) : 'Not available'}</p>
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-slate-100 p-4">
+                <p className="text-sm font-semibold text-slate-900">Buyer message</p>
+                <p className="mt-3 text-sm leading-7 text-slate-600">{selectedInquiry.message}</p>
+                <p className="mt-3 text-xs text-slate-500">Sent {formatDateTime(selectedInquiry.createdAt)}</p>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {selectedInquiry.senderPhone && (
+                  <a
+                    className="btn-primary"
+                    href={whatsappLink(selectedInquiry.senderPhone, `Hello ${selectedInquiry.senderName}, I received your PeezuHub contact request about \"${selectedInquiry.listing?.title || 'my listing'}\".`)}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <MessageCircle size={16} /> WhatsApp buyer
+                  </a>
+                )}
+                {selectedInquiry.senderPhone && (
+                  <a className="btn-secondary" href={`tel:${selectedInquiry.senderPhone}`}>
+                    <Phone size={16} /> Call buyer
+                  </a>
+                )}
+                {selectedInquiry.senderEmail && (
+                  <a className="btn-secondary" href={`mailto:${selectedInquiry.senderEmail}?subject=${encodeURIComponent(`PeezuHub enquiry: ${selectedInquiry.listing?.title || 'your request'}`)}`}>
+                    <Mail size={16} /> Email buyer
+                  </a>
+                )}
+                {selectedInquiry.listing?._id && (
+                  <Link className="btn-secondary" to={`/listings/${selectedInquiry.listing._id}`} onClick={() => setSelectedInquiry(null)}>
+                    <ExternalLink size={16} /> Open listing
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

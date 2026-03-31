@@ -6,8 +6,27 @@ export function money(value = 0) {
   }).format(value);
 }
 
+export function normalizeWhatsAppNumber(number = '') {
+  const digits = String(number).replace(/\D/g, '');
+  if (!digits) return '';
+
+  if (digits.startsWith('234') && digits.length >= 13) {
+    return digits;
+  }
+
+  if (digits.startsWith('0') && digits.length === 11) {
+    return `234${digits.slice(1)}`;
+  }
+
+  if (!digits.startsWith('0') && !digits.startsWith('234') && digits.length === 10) {
+    return `234${digits}`;
+  }
+
+  return digits;
+}
+
 export function whatsappLink(number, text = 'Hello, I found your listing on PeezuHub. Is it still available?') {
-  const clean = (number || '').replace(/[^\d]/g, '');
+  const clean = normalizeWhatsAppNumber(number);
   return `https://wa.me/${clean}?text=${encodeURIComponent(text)}`;
 }
 

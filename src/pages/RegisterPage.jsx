@@ -37,7 +37,10 @@ export default function RegisterPage() {
       toast.success('Signed up with Google! Welcome 🎉');
       navigate('/', { replace: true });
     } catch (err) {
-      const msg = err.response?.data?.message || err.message || 'Google sign-up failed. Please try again.';
+      const msg =
+        err.response?.data?.message ||
+        err.message ||
+        'Google sign-up failed. Please try again.';
       toast.error(msg);
     }
   }
@@ -59,17 +62,23 @@ export default function RegisterPage() {
       <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
         <div>
           <input className="input" placeholder="Full name" {...form.register('name')} />
-          {form.formState.errors.name && <p className="mt-2 text-sm text-red-600">{form.formState.errors.name.message}</p>}
+          {form.formState.errors.name && (
+            <p className="mt-2 text-sm text-red-600">{form.formState.errors.name.message}</p>
+          )}
         </div>
 
         <div>
           <input className="input" placeholder="Email" {...form.register('email')} />
-          {form.formState.errors.email && <p className="mt-2 text-sm text-red-600">{form.formState.errors.email.message}</p>}
+          {form.formState.errors.email && (
+            <p className="mt-2 text-sm text-red-600">{form.formState.errors.email.message}</p>
+          )}
         </div>
 
         <div>
           <input type="password" className="input" placeholder="Password" {...form.register('password')} />
-          {form.formState.errors.password && <p className="mt-2 text-sm text-red-600">{form.formState.errors.password.message}</p>}
+          {form.formState.errors.password && (
+            <p className="mt-2 text-sm text-red-600">{form.formState.errors.password.message}</p>
+          )}
         </div>
 
         <button className="btn-primary w-full" type="submit">Register</button>
@@ -84,7 +93,13 @@ export default function RegisterPage() {
       <GoogleAuthButton
         mode="register"
         onAuthenticated={handleGoogleSuccess}
-        onError={(error) => toast.error(error?.response?.data?.message || error?.message || 'Google sign-up failed. Please try again.')}
+        onError={(error) =>
+          toast.error(
+            error?.response?.data?.message ||
+              error?.message ||
+              'Google sign-up failed. Please try again.'
+          )
+        }
       />
     </AuthShell>
   );

@@ -1,5 +1,6 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Bell,
   Crown,
@@ -18,6 +19,7 @@ import Loader from '../components/Loader';
 import Badge from '../components/Badge';
 import useFetch from '../hooks/useFetch';
 import { formatDate } from '../utils/format';
+import { emitUnreadCountChange, getNotificationTarget } from '../utils/notifications';
 
 const NOTIF_CATEGORIES = {
   report: 'reports',
@@ -44,6 +46,7 @@ const MAIN_TABS = [
   { key: 'users', label: 'Users' },
   { key: 'notifications', label: 'Notifications' },
 ];
+const MAIN_TAB_KEYS = new Set(MAIN_TABS.map((tab) => tab.key));
 
 const NOTIF_STYLES = {
   report: { icon: '🚩', accent: 'text-rose-700', bg: 'bg-rose-50' },
@@ -84,7 +87,7 @@ function SectionShell({ title, subtitle, actions, children }) {
   );
 }
 
-function NotificationItem({ item, onRead }) {
+function NotificationItem({ item, onRead, onOpen }) {
   const style = NOTIF_STYLES[item.type] || { icon: '🔔', accent: 'text-slate-700', bg: 'bg-slate-50' };
 
   return (
@@ -99,18 +102,27 @@ function NotificationItem({ item, onRead }) {
               <p className={`text-sm font-bold ${style.accent}`}>{item.title}</p>
               <p className="mt-1 text-sm leading-6 text-slate-600">{item.message}</p>
             </div>
-            {!item.isRead ? (
+            <div className="flex shrink-0 flex-col gap-2">
+              {!item.isRead ? (
+                <button
+                  onClick={() => onRead(item._id)}
+                  className="rounded-xl border border-brand-200 bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-700 transition hover:bg-brand-100"
+                >
+                  Mark read
+                </button>
+              ) : (
+                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-500">
+                  Read
+                </span>
+              )}
+
               <button
-                onClick={() => onRead(item._id)}
-                className="shrink-0 rounded-xl border border-brand-200 bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-700 transition hover:bg-brand-100"
+                onClick={() => onOpen(item)}
+                className="rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-800"
               >
-                Mark read
+                Open
               </button>
-            ) : (
-              <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-500">
-                Read
-              </span>
-            )}
+            </div>
           </div>
           <p className="mt-2 text-xs text-slate-400">
             {new Date(item.createdAt).toLocaleString('en-NG', {
@@ -125,12 +137,15 @@ function NotificationItem({ item, onRead }) {
 }
 
 export default function AdminDashboardPage() {
-  const [mainTab, setMainTab] = useState('overview');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTab = searchParams.get('tab');
+  const [mainTab, setMainTab] = useState(MAIN_TAB_KEYS.has(requestedTab) ? requestedTab : 'overview');
   const [notifTab, setNotifTab] = useState('all');
   const [listingSearch, setListingSearch] = useState('');
   const [userSearch, setUserSearch] = useState('');
   const [reasons, setReasons] = useState({});
   const [refreshKey, setRefreshKey] = useState(0);
+  const navigate = useNavigate();
 
   const { data, loading, error, setData } = useFetch(async () => {
     const [dashRes, notifRes, usersRes] = await Promise.all([
@@ -151,6 +166,30 @@ export default function AdminDashboardPage() {
   }, [refreshKey]);
 
   const refresh = useCallback(() => setRefreshKey((value) => value + 1), []);
+
+  useEffect(() => {
+    if (MAIN_TAB_KEYS.has(requestedTab) && requestedTab !== mainTab) {
+      setMainTab(requestedTab);
+    }
+
+    if (!requestedTab && mainTab !== 'overview') {
+      setMainTab('overview');
+    }
+  }, [requestedTab, mainTab]);
+
+  useEffect(() => {
+    emitUnreadCountChange(data?.unreadCount || 0);
+  }, [data?.unreadCount]);
+
+  function changeMainTab(tabKey) {
+    setMainTab(tabKey);
+    const next = new URLSearchParams(searchParams);
+
+    if (!tabKey || tabKey === 'overview') next.delete('tab');
+    else next.set('tab', tabKey);
+
+    setSearchParams(next, { replace: true });
+  }
 
   async function moderate(id, action) {
     try {
@@ -177,13 +216,18 @@ export default function AdminDashboardPage() {
   async function markRead(id) {
     try {
       await client.patch(`/notifications/${id}/read`);
-      setData((prev) => ({
-        ...prev,
-        notifications: (prev.notifications || []).map((item) =>
-          item._id === id ? { ...item, isRead: true } : item
-        ),
-        unreadCount: Math.max(0, (prev.unreadCount || 1) - 1),
-      }));
+      setData((prev) => {
+        const nextUnread = Math.max(0, (prev.unreadCount || 1) - 1);
+        emitUnreadCountChange(nextUnread);
+
+        return {
+          ...prev,
+          notifications: (prev.notifications || []).map((item) =>
+            item._id === id ? { ...item, isRead: true } : item
+          ),
+          unreadCount: nextUnread,
+        };
+      });
     } catch {
       toast.error('Could not mark notification as read.');
     }
@@ -192,6 +236,7 @@ export default function AdminDashboardPage() {
   async function markAllRead() {
     try {
       await client.patch('/notifications/read-all');
+      emitUnreadCountChange(0);
       setData((prev) => ({
         ...prev,
         notifications: (prev.notifications || []).map((item) => ({ ...item, isRead: true })),
@@ -208,6 +253,33 @@ export default function AdminDashboardPage() {
   const reports = data?.reports || [];
   const allListings = data?.allListings || [];
   const users = data?.users || [];
+
+  async function openNotification(item) {
+    const target = getNotificationTarget(item, '/admin?tab=notifications');
+
+    if (!item?.isRead) {
+      try {
+        await client.patch(`/notifications/${item._id}/read`);
+        setData((prev) => {
+          const nextUnread = Math.max(0, (prev.unreadCount || 1) - 1);
+          emitUnreadCountChange(nextUnread);
+
+          return {
+            ...prev,
+            notifications: (prev.notifications || []).map((entry) =>
+              entry._id === item._id ? { ...entry, isRead: true } : entry
+            ),
+            unreadCount: nextUnread,
+          };
+        });
+      } catch {
+        toast.error('Could not open notification.');
+        return;
+      }
+    }
+
+    navigate(target);
+  }
 
   const filteredNotifications = useMemo(() => {
     if (notifTab === 'all') return notifications;
@@ -283,7 +355,7 @@ export default function AdminDashboardPage() {
             {data?.unreadCount > 0 ? (
               <button
                 onClick={() => {
-                  setMainTab('notifications');
+                  changeMainTab('notifications');
                   setNotifTab('all');
                 }}
                 className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
@@ -311,7 +383,7 @@ export default function AdminDashboardPage() {
           return (
             <button
               key={tab.key}
-              onClick={() => setMainTab(tab.key)}
+              onClick={() => changeMainTab(tab.key)}
               className={`rounded-2xl px-4 py-2.5 text-sm font-semibold transition ${
                 isActive ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
               }`}
@@ -367,7 +439,7 @@ export default function AdminDashboardPage() {
             subtitle="Newest members and premium states."
             actions={
               <button
-                onClick={() => setMainTab('users')}
+                onClick={() => changeMainTab('users')}
                 className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-brand-200 hover:text-brand-700"
               >
                 View all users
@@ -637,7 +709,7 @@ export default function AdminDashboardPage() {
           <div className="space-y-3">
             {filteredNotifications.length ? (
               filteredNotifications.map((item) => (
-                <NotificationItem key={item._id} item={item} onRead={markRead} />
+                <NotificationItem key={item._id} item={item} onRead={markRead} onOpen={openNotification} />
               ))
             ) : (
               <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-sm text-slate-500">

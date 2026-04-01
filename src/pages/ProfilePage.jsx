@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Bell,
   CalendarDays,
@@ -27,6 +27,7 @@ import ListingEditorModal from '../components/ListingEditorModal';
 import useFetch from '../hooks/useFetch';
 import { useAuth } from '../context/AuthContext';
 import { formatDate, whatsappLink } from '../utils/format';
+import { emitUnreadCountChange, getNotificationTarget } from '../utils/notifications';
 
 function isPremiumActive(user) {
   return Boolean(
@@ -58,6 +59,7 @@ export default function ProfilePage() {
   const [selectedInquiry, setSelectedInquiry] = useState(null);
   const [actionLoadingKey, setActionLoadingKey] = useState('');
   const notificationsRef = useRef(null);
+  const navigate = useNavigate();
 
   const { data, loading, error, setData } = useFetch(async () => {
     const [listingsRes, inboxRes, notificationsRes] = await Promise.all([
@@ -84,6 +86,10 @@ export default function ProfilePage() {
       notificationsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }, [focusNotifications, data?.notifications?.length]);
+
+  useEffect(() => {
+    emitUnreadCountChange(data?.unreadCount || 0);
+  }, [data?.unreadCount]);
 
   const stats = useMemo(() => {
     const listings = data?.listings || [];
@@ -165,13 +171,18 @@ export default function ProfilePage() {
   async function markNotificationRead(id) {
     try {
       await client.patch(`/notifications/${id}/read`);
-      setData((current) => ({
-        ...current,
-        notifications: (current.notifications || []).map((item) =>
-          item._id === id ? { ...item, isRead: true } : item
-        ),
-        unreadCount: Math.max(0, (current.unreadCount || 0) - 1),
-      }));
+      setData((current) => {
+        const nextUnread = Math.max(0, (current.unreadCount || 0) - 1);
+        emitUnreadCountChange(nextUnread);
+
+        return {
+          ...current,
+          notifications: (current.notifications || []).map((item) =>
+            item._id === id ? { ...item, isRead: true } : item
+          ),
+          unreadCount: nextUnread,
+        };
+      });
     } catch (err) {
       toast.error(err.response?.data?.message || 'Could not mark notification as read.');
     }
@@ -180,6 +191,7 @@ export default function ProfilePage() {
   async function markAllNotificationsRead() {
     try {
       await client.patch('/notifications/read-all');
+      emitUnreadCountChange(0);
       setData((current) => ({
         ...current,
         notifications: (current.notifications || []).map((item) => ({ ...item, isRead: true })),
@@ -189,6 +201,33 @@ export default function ProfilePage() {
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to mark all notifications as read.');
     }
+  }
+
+  async function openNotification(item) {
+    const target = getNotificationTarget(item, '/profile?tab=notifications');
+
+    if (!item?.isRead) {
+      try {
+        await client.patch(`/notifications/${item._id}/read`);
+        setData((current) => {
+          const nextUnread = Math.max(0, (current.unreadCount || 0) - 1);
+          emitUnreadCountChange(nextUnread);
+
+          return {
+            ...current,
+            notifications: (current.notifications || []).map((entry) =>
+              entry._id === item._id ? { ...entry, isRead: true } : entry
+            ),
+            unreadCount: nextUnread,
+          };
+        });
+      } catch (err) {
+        toast.error(err.response?.data?.message || 'Could not open notification.');
+        return;
+      }
+    }
+
+    navigate(target);
   }
 
   const notifications = data?.notifications || [];
@@ -320,26 +359,32 @@ export default function ProfilePage() {
 
               <div className="space-y-3">
                 {notifications.map((item) => (
-                  <div key={item._id} className={`rounded-3xl border p-4 text-sm ${item.isRead ? 'border-slate-100 bg-white' : 'border-brand-100 bg-brand-50/40'}`}>
+                  <div key={item._id} className={`rounded-3xl border p-4 text-sm transition ${item.isRead ? 'border-slate-100 bg-white' : 'border-brand-100 bg-brand-50/40 shadow-sm'}`}>
                     <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-semibold text-slate-900">{item.title}</p>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          {!item.isRead && <span className="h-2.5 w-2.5 rounded-full bg-rose-500" />}
+                          <p className="font-semibold text-slate-900">{item.title}</p>
+                        </div>
                         <p className="mt-2 leading-6 text-slate-600">{item.message}</p>
                         <p className="mt-3 text-xs text-slate-500">{formatDateTime(item.createdAt)}</p>
                       </div>
-                      {!item.isRead && (
-                        <button type="button" onClick={() => markNotificationRead(item._id)} className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-brand-700 shadow-sm ring-1 ring-brand-100">
-                          Mark read
+
+                      <div className="flex shrink-0 flex-col gap-2">
+                        {!item.isRead && (
+                          <button type="button" onClick={() => markNotificationRead(item._id)} className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-brand-700 shadow-sm ring-1 ring-brand-100">
+                            Mark read
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => openNotification(item)}
+                          className="inline-flex items-center justify-center gap-2 rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white transition hover:bg-slate-800"
+                        >
+                          Open <ExternalLink size={13} />
                         </button>
-                      )}
-                    </div>
-                    {item.meta?.listingId && (
-                      <div className="mt-3">
-                        <Link to={`/listings/${item.meta.listingId}`} className="inline-flex items-center gap-2 text-xs font-semibold text-brand-700 hover:text-brand-800">
-                          Open related listing <ExternalLink size={14} />
-                        </Link>
                       </div>
-                    )}
+                    </div>
                   </div>
                 ))}
                 {!notifications.length && <div className="rounded-3xl border border-slate-100 p-4 text-sm text-slate-500">No notifications yet.</div>}

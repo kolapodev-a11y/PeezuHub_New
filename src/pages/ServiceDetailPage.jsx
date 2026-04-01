@@ -127,6 +127,7 @@ export default function ServiceDetailPage() {
             {listing.isVerified && <Badge color="green">Verified</Badge>}
             {isSold && <Badge color="yellow">Sold</Badge>}
             <Badge color="blue">{listing.category}</Badge>
+            {listing.user?.role === 'admin' && <Badge color="blue">Admin seller</Badge>}
           </div>
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div>
@@ -204,6 +205,19 @@ export default function ServiceDetailPage() {
 
       <div className="space-y-6">
         <div className="card sticky top-24 space-y-4">
+          <div className="rounded-3xl border border-slate-100 bg-slate-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Seller profile</p>
+            <div className="mt-3 flex items-center gap-2">
+              <p className="font-semibold text-slate-900">{listing.user?.name || 'Seller'}</p>
+              {listing.user?.role === 'admin' && <Badge color="blue">Admin</Badge>}
+            </div>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              {listing.user?.role === 'admin'
+                ? 'This account is the marketplace administrator, so the admin role is now visible publicly on listings.'
+                : 'Contact the seller directly through WhatsApp or the in-app enquiry form below.'}
+            </p>
+          </div>
+
           <h2 className="text-xl font-bold">Contact seller</h2>
           {!canContactSeller ? (
             <button className="btn-primary w-full opacity-70" type="button" disabled>

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -27,6 +27,11 @@ export default function PostServicePage() {
   const [files, setFiles] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [createdListing, setCreatedListing] = useState(null);
+
+  // ✅ FIX: Scroll to top whenever the step changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+  }, [step]);
 
   const form = useForm({
     resolver: zodResolver(schema),
@@ -166,7 +171,7 @@ export default function PostServicePage() {
               <div className="rounded-3xl border border-brand-100 bg-brand-50 p-4 text-sm text-brand-700">
                 Premium is no longer forced during posting. You can upgrade any listing later from your profile whenever you're ready.
               </div>
-              <label className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+              <label className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
                 <input type="checkbox" className="mt-1" {...form.register('safetyAccepted')} />
                 <span className="text-sm font-medium leading-6">I confirm this listing is genuine, I will not demand unsafe advance payments, and I accept responsibility for the information posted.</span>
               </label>

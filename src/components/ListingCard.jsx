@@ -17,6 +17,7 @@ export default function ListingCard({ listing }) {
           {isSold && <Badge color="yellow">Sold</Badge>}
           {listing.status === 'pending' && <Badge color="slate">Pending</Badge>}
           {listing.status === 'rejected' && <Badge color="red">Rejected</Badge>}
+          {listing.user?.role === 'admin' && <Badge color="blue">Admin seller</Badge>}
         </div>
       </div>
       <div className="space-y-3 p-4">

@@ -15,6 +15,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react';
 import client from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { subscribeUnreadCountChange } from '../utils/notifications';
 
 function getInitials(user) {
   const seed = user?.name || user?.email || 'P';
@@ -101,6 +102,14 @@ export default function Navbar() {
       cancelled = true;
     };
   }, [user, location.pathname]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeUnreadCountChange((nextCount) => {
+      setUnreadCount(nextCount);
+    });
+
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(event) {

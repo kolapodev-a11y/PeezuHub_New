@@ -23,6 +23,7 @@ export function subscribeUnreadCountChange(callback) {
 
 export function getNotificationTarget(item, fallback = '/profile?tab=notifications') {
   if (item?.meta?.actionUrl) return item.meta.actionUrl;
+  if (item?.meta?.path) return item.meta.path;
   if (item?.meta?.listingId) return `/listings/${item.meta.listingId}`;
   return fallback;
 }

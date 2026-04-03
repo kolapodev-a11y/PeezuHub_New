@@ -121,6 +121,16 @@ export function AuthProvider({ children }) {
     dispatch({ type: 'LOGOUT' });
   }, []);
 
+  const logoutWithConfirmation = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      const confirmed = window.confirm('Are you sure you want to logout?');
+      if (!confirmed) return false;
+    }
+
+    logout();
+    return true;
+  }, [logout]);
+
   const value = useMemo(
     () => ({
       ...state,
@@ -130,8 +140,9 @@ export function AuthProvider({ children }) {
       googleLogin: googleAuth,
       refreshUser,
       logout,
+      logoutWithConfirmation,
     }),
-    [state, login, register, googleAuth, refreshUser, logout]
+    [state, login, register, googleAuth, refreshUser, logout, logoutWithConfirmation]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

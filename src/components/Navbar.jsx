@@ -36,7 +36,7 @@ function ProfileAvatar({ initials, className = '' }) {
 }
 
 export default function Navbar() {
-  const { user, logout } = useAuth();
+  const { user, logoutWithConfirmation } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -140,8 +140,10 @@ export default function Navbar() {
   function handleLogout() {
     setMobileMenuOpen(false);
     setProfileMenuOpen(false);
-    logout();
-    navigate('/');
+    const didLogout = logoutWithConfirmation();
+    if (didLogout) {
+      navigate('/');
+    }
   }
 
   const notificationBadge = unreadCount > 99 ? '99+' : unreadCount;
@@ -439,9 +441,9 @@ export default function Navbar() {
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Account</p>
                 <p className="mt-2 text-sm font-semibold text-slate-900">Manage your PeezuHub presence professionally</p>
                 <p className="mt-1 text-sm leading-6 text-slate-500">
-                  Update listings, review account activity and sign out securely from one clean navigation panel.
+                  Update listings and review account activity from one clean navigation panel.
                 </p>
-                <div className="mt-4 grid grid-cols-2 gap-3">
+                <div className="mt-4">
                   <button
                     type="button"
                     onClick={() => {
@@ -451,9 +453,6 @@ export default function Navbar() {
                     className="btn-secondary w-full"
                   >
                     Profile
-                  </button>
-                  <button type="button" onClick={handleLogout} className="btn-primary w-full bg-slate-900 hover:bg-slate-800">
-                    Sign Out
                   </button>
                 </div>
               </div>

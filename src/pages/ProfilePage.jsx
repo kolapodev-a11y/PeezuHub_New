@@ -53,7 +53,7 @@ function formatDateTime(value) {
 }
 
 export default function ProfilePage() {
-  const { user, logout, refreshUser } = useAuth();
+  const { user, logoutWithConfirmation, refreshUser } = useAuth();
   const [params] = useSearchParams();
   const [editingListing, setEditingListing] = useState(null);
   const [selectedInquiry, setSelectedInquiry] = useState(null);
@@ -159,6 +159,13 @@ export default function ProfilePage() {
     } catch (err) {
       toast.error(err.response?.data?.message || 'Unable to start premium upgrade.');
       setActionLoadingKey('');
+    }
+  }
+
+  function handleLogout() {
+    const didLogout = logoutWithConfirmation();
+    if (didLogout) {
+      navigate('/');
     }
   }
 
@@ -291,7 +298,7 @@ export default function ProfilePage() {
               Your premium payment is pending verification. The upgrade button will reappear only if this payment does not complete.
             </div>
           )}
-          <button className="btn-secondary w-full" onClick={logout}>
+          <button className="btn-secondary w-full" onClick={handleLogout}>
             <LogOut size={18} />
             Logout
           </button>

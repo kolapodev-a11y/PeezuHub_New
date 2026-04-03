@@ -43,19 +43,27 @@ export default function PaymentCallbackPage() {
           { timeout: 15000 },
         );
 
-        if (data.payment?.status === 'success') {
-          // Refresh the in-memory user so premium badge appears immediately
-          if (typeof refreshUser === 'function') {
-            await refreshUser();
-          }
+        const paymentStatus = String(data.payment?.status || '').toLowerCase();
+
+        // Refresh the in-memory user so premium badge/status appears immediately
+        if (typeof refreshUser === 'function') {
+          await refreshUser();
+        }
+
+        if (paymentStatus === 'success') {
           setStatus('success');
           setMessage(
             'Payment verified successfully. Your seller premium is now active, and your current and future listings can receive premium visibility while the upgrade stays active.',
           );
+        } else if (['abandoned', 'failed', 'reversed', 'cancelled', 'canceled'].includes(paymentStatus)) {
+          setStatus('error');
+          setMessage(
+            'This payment was not completed, so your pending premium state has been cleared. You can return to your profile and try the upgrade again whenever you are ready.',
+          );
         } else {
           setStatus('error');
           setMessage(
-            `Payment status: "${data.payment?.status || 'unknown'}". If you believe this is wrong, please contact support.`,
+            `Payment status: "${data.payment?.status || 'unknown'}". Please refresh your profile for the latest premium status or contact support if needed.`,
           );
         }
       } catch (err) {

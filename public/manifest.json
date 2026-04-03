@@ -1,7 +1,7 @@
 {
   "name": "PeezuHub",
   "short_name": "PeezuHub",
-  "description": "Nigeria's safe marketplace for businesses and freelancers",
+  "description": "Nigeria's trusted marketplace to buy, sell, and rent products.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#2563eb",

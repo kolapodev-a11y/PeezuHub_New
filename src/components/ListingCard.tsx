@@ -1,0 +1,70 @@
+import { Link } from 'react-router-dom';
+import { Camera, MapPin } from 'lucide-react';
+import Badge from './Badge';
+import RatingStars from './RatingStars';
+import SmartImage from './SmartImage';
+import { money, truncate } from '../utils/format';
+import type { Listing } from '../types/listing';
+
+type ListingCardProps = {
+  listing: Listing;
+};
+
+export default function ListingCard({ listing }: ListingCardProps) {
+  const isSold = listing.saleStatus === 'sold';
+  const previewPhotos = (listing.photos || []).slice(0, 4);
+
+  return (
+    <Link to={`/listings/${listing._id}`} className="card block overflow-hidden p-0 transition hover:-translate-y-1">
+      <div className="relative h-44 bg-slate-100">
+        <SmartImage
+          src={listing.photos?.[0]}
+          alt={listing.title}
+          wrapperClassName="h-full w-full"
+          className={`h-full w-full object-cover ${isSold ? 'opacity-80' : ''}`}
+        />
+        <div className="absolute left-3 top-3 flex flex-wrap gap-2">
+          {listing.isFeatured && <Badge color="yellow">Premium</Badge>}
+          {listing.isVerified && <Badge color="green">Verified</Badge>}
+          {isSold && <Badge color="yellow">Sold</Badge>}
+          {listing.status === 'pending' && <Badge color="slate">Pending</Badge>}
+          {listing.status === 'rejected' && <Badge color="red">Rejected</Badge>}
+          {listing.user?.role === 'admin' && <Badge color="blue">Admin seller</Badge>}
+        </div>
+
+        <div className="absolute right-3 top-3 rounded-full bg-slate-950/70 px-2.5 py-1 text-xs font-semibold text-white">
+          <span className="inline-flex items-center gap-1"><Camera size={12} /> {previewPhotos.length}</span>
+        </div>
+
+        {previewPhotos.length > 1 && (
+          <div className="absolute inset-x-3 bottom-3 grid grid-cols-4 gap-1.5">
+            {previewPhotos.map((photo, index) => (
+              <div key={`${listing._id}-${index}`} className="h-10 overflow-hidden rounded-xl border border-white/80 shadow-sm backdrop-blur-sm">
+                <SmartImage src={photo} alt={`${listing.title} ${index + 1}`} className="h-full w-full object-cover" wrapperClassName="h-full w-full bg-white/80" />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-3 p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="font-bold text-slate-900">{listing.title}</h3>
+            <p className="mt-1 text-xs text-slate-500">{listing.category}</p>
+          </div>
+          <p className="text-sm font-semibold text-brand-700">{money(listing.startingPrice)}</p>
+        </div>
+        <p className="text-sm leading-6 text-slate-600">{truncate(listing.description, 90)}</p>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 text-xs text-slate-500">
+            <MapPin size={14} /> {listing.city}, {listing.state}
+          </div>
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <RatingStars rating={listing.averageRating} size={14} /> ({listing.reviewsCount || 0})
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}

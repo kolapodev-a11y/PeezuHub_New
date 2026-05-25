@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import SmartImage from '../components/SmartImage';
 import { Link, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -111,11 +112,11 @@ export default function ServiceDetailPage() {
     <div className="grid gap-6 lg:grid-cols-[1.25fr,0.75fr]">
       <div className="space-y-6">
         <div className="card space-y-4 overflow-hidden p-0">
-          <img src={listing.photos?.[activePhoto]} alt={listing.title} className="h-[320px] w-full object-cover md:h-[420px]" />
+          <SmartImage src={listing.photos?.[activePhoto]} alt={listing.title} className="h-[320px] w-full object-cover md:h-[420px]" wrapperClassName="h-[320px] w-full md:h-[420px]" eager />
           <div className="grid grid-cols-4 gap-3 p-4">
             {listing.photos?.map((photo, index) => (
               <button key={index} className={`overflow-hidden rounded-2xl border ${activePhoto === index ? 'border-brand-600' : 'border-slate-100'}`} onClick={() => setActivePhoto(index)}>
-                <img src={photo} alt={`${listing.title}-${index}`} className="h-20 w-full object-cover" />
+                <SmartImage src={photo} alt={`${listing.title}-${index}`} className="h-20 w-full object-cover" wrapperClassName="h-20 w-full" />
               </button>
             ))}
           </div>
